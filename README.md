@@ -1,4 +1,4 @@
-# Go Cesium Point Cloud Tiler
+# Go Cesium Tiler
 ![Build Status](https://codebuild.eu-west-1.amazonaws.com/badges?uuid=eyJlbmNyeXB0ZWREYXRhIjoibSt1bmxTSGZTNHlLaS81d3ZEM3EyQXZIUXh4U0g4VjdtZUIwaUNMeEswaU5nc3A4YzZQQ2JiQ1pJbkFaVWxrcmF0TEFnRkM5WFFIbTVKQmtYSkVBTy9vPSIsIml2UGFyYW1ldGVyU3BlYyI6IjZjZ1NodXJzczJ0MlJja2UiLCJtYXRlcmlhbFNldFNlcmlhbCI6MX0%3D&branch=master)
 ```
                                              _   _ _
@@ -11,13 +11,29 @@
 ```
 
 
-
-Go Cesium Point Cloud Tiler is a tool to convert point cloud stored as LAS files to Cesium.js 3D tiles ready to be
+Go Cesium Tiler is a tool to convert point cloud stored as LAS files to Cesium.js 3D tiles ready to be
 streamed, automatically generating the appropriate level of details and including additional information for each point 
 such as color, laser intensity and classification.   
 
+## What's new: V2
+GoCesiumTiler V2 has been released in preview mode and it introduces several important improvements over V1:
+- Greatly reduced memory usage: you can expect a 60%+ reduction of memory consumption.
+- Faster: up to 15% faster compared to V1
+- Allows reading and merging multiple LAS files in a single 3D Tile output (will load them all up in memory)
+- More intuitive fine tuning of the sampling quality and hard safeguards against deeply nested trees or small tiles
+- Assets embedded in the binary: no need to deploy the assets folder, works as a single portable binary
+- Ready to be used as part of other go packages with an easy to use interface
+- Many bugfixes
+- Much greater unit test coverage
+
+This release is backward incompatible compared to V1 and also deprecates several options, most of which were not of much interest.
+Some of these might be added in future minor updates of V2.
+- Refine mode "REPLACE" is currently unavailable in V2
+- Recursive options is currently unavailable in V2
+- Algorithm cannot be chosen anymore: grid sampling is the only one available and is implicitly used
+
 ## Features
-Go Cesium Point Cloud Tiler automatically handles coordinate conversion to the format required by Cesium and can also 
+Go Cesium Tiler automatically handles coordinate conversion to the format required by Cesium and can also 
 convert the elevation measured above the geoid to the elevation above the ellipsoid as by Cesium requirements. 
 The tool uses the version 4.9.2 of the well-known Proj.4 library to handle coordinate conversion. The input SRID is
 specified by just providing the relative EPSG code, an internal dictionary converts it to the corresponding proj4 
@@ -32,39 +48,15 @@ propeties named `INTENSITY` and `CLASSIFICATION`.
 
 
 ## Changelog
-##### Version 1.2.3
-* Added experimental support for LAS 1.4
-* Added support for additional EPSG codes in the range EPSG:6666 to EPSG:6692
-
-##### Version 1.2.2
-* Fixed a bug in parsing RGB colors for LAS files having point records of non standard length.
-* Fixed a bug when processing multiple files (this was not really fixed in the previous version).
-
-##### Version 1.2.1
-* Added option to support LAS files with 8bit color depth.
-* Fixed a bug when processing multiple files.
-* Fixed a bug in computing the geometric error of the lowest level of detail tile.
-
-##### Version 1.2.0 
-* Added support for `REPLACE` refine mode. Default refine mode is still `ADD`.
-
-##### Version 1.1.1 
-* Fixed a bug that prevented the executable to be used on computers other than the one where the code was built.
-
-##### Version 1.1.0 
-* Added a new tiling algorithm that greatly improves the output quality.
-
-##### Version 1.0.3 
-* Added shorthand versions of input flags and a new intro logo. Also a major code refactoring has happened behind the scenes. 
-
-##### Version 1.0.2 
-* Fixed bug preventing tileset.json from being generated if only one pnts is created
-
-##### Version 1.0.1 
-* Fixed a crash occurring when converting point clouds without executing any coordinate system conversion.
-
-##### Version 1.0.0 release
-* First public release
+##### Version 2.0.0
+* Most of the code has been rewritten from the ground up, achieving much faster tiling with lower memory usage
+* Allows merging multiple LAS files into a single 3D tile
+* New options to fine tune the sampling quality: min points per tile, resolution and max tree depth
+* Assets now embedded in the binary
+* Much higher unit test coverage
+* The tiler library can be used into external golang projects
+* The CLI has been rewritten from scratch, many options changed name or were added/removed
+* `GOCESIUMTILER_WORKDIR` has been deprecated
 
 ## Precompiled Binaries
 Along with the source code a prebuilt binary for Windows x64 is provided for each release of the tool in the github page.
@@ -75,6 +67,13 @@ To get started with development just clone the repository.
 
 When launching a build with `go build` go modules will retrieve the required dependencies. 
 
+To build the CLI executable you can use:
+```
+go build -o gocesiumtiler ./cmd/main.go
+```
+
+This will create an executable named `gocesiumtiler` in the build folder.
+
 As the project and its dependencies make use of C code, under windows you should also have GCC compiler installed and available
 in the PATH environment variable. More information on cgo compiler are available [here](https://github.com/golang/go/wiki/cgo).
 
@@ -82,132 +81,108 @@ Additionally make sure CGO is enabled via `go env CGO_ENABLED`. CGO_ENABLED envi
 
 Under linux you will have to have `gcc` installed. Also make sure go is configured to pass the correct flags to gcc. In particular if you encounter compilation errors similar to `undefined reference to 'sqrt'` it means that it is not linking the standard math libraries. A way to fix this is to add `-lm` to the `CGO_LDFLAGS`environment variable, for example by running `export CGO_LDFLAGS="-g -O2 -lm"`.
 
-To launch the tests use the command `go test ./test/... -v`.
+To launch the tests use the command
+```
+go test ./... -v
+```
+
+To check the test coverage use:
+```
+go test -coverprofile cover.out -v  ./... && go tool cover -html=cover.out
+```
 
 ## Usage
 
-<b>The code expects to find a copy of the [static](assets) folder in the same path where the compiled executable runs.</b>
-
-> Alternatively, from version 1.1.1 you can also specify the assets folder location (i.e. the folder that contains the `assets` folder) 
-by setting the `GOCESIUMTILER_WORKDIR` environment variable in your system.
-
 To run just execute the binary tool with the appropriate flags.
 
-There are various algorithms selectable. It is highly suggested to use the newer "grid" algorithm, which is the default one.
-Other possible choices are "random" and "randombox", which however are deprecated even though they might turn out to be slightly
-faster in common scenarios.
+There are various algorithms selectable.
 
 To show help run:
 ```
 gocesiumtiler -help
 ```
 
+### Commands
+There are two commands, `file` and `folder`:
+
+* `gocesiumtiler file { flags } myfile.las`: Converts `myfile.las` into a Cesium 3D point cloud using the flags passed in input (see below).
+* `gocesiumtiler folder { flags } myfolder`: Finds all LAS files into `myfolder` and convers them into one or more Cesium 3D Point clouds using the flags passed as input (see below).S
+
 ### Flags
 
+#### Common flags
+These flags are applicable to both the `file` and the `folder` commands
 ```
-  -8bit                 Assumes the input LAS has colors encoded in eight bit format. Default is false (LAS has 16 bit color depth)
-  -a string             Sets the algorithm to use. Must be one of Grid,Random,RandomBox. Grid algorithm is highly suggested, others are deprecated and will be removed in future versions. (shorthand for algorithm) (default "grid")
-  -algorithm string     Sets the algorithm to use. Must be one of Grid,Random,RandomBox. Grid algorithm is highly suggested, others are deprecated and will be removed in future versions. (default "grid")
-  -b                    Assumes the input LAS has colors encoded in eight bit format. Default is false (LAS has 16 bit color depth). (shorthand for -8bit)
-  -e int                EPSG srid code of input points. (shorthand for srid) (default 4326)
-  -f                    Enables processing of all las files from input folder. Input must be a folder if specified (shorthand for folder)
-  -folder               Enables processing of all las files from input folder. Input must be a folder if specified
-  -g                    Enables Geoid to Ellipsoid elevation correction. Use this flag if your input LAS files have Z coordinates specified relative to the Earth geoid rather than to the standard ellipsoid. (shorthand for geoid)
-  -geoid                Enables Geoid to Ellipsoid elevation correction. Use this flag if your input LAS files have Z coordinates specified relative to the Earth geoid rather than to the standard ellipsoid.
-  -grid-max-size float  Max cell size in meters for the grid algorithm. It roughly represents the max spacing between any two samples.  (default 5)
-  -grid-min-size float  Min cell size in meters for the grid algorithm. It roughly represents the minimum possible size of a 3d tile.  (default 0.15)
-  -h                    Displays this help. (shorthand for help)
-  -help                 Displays this help.
-  -i string             Specifies the input las file/folder. (shorthand for input)
-  -input string         Specifies the input las file/folder.
-  -m int                Max number of points per tile for the Random and RandomBox algorithms. (shorthand for maxpts) (default 50000)
-  -maxpts int           Max number of points per tile for the Random and RandomBox algorithms. (default 50000)
-  -n float              Min cell size in meters for the grid algorithm. It roughly represents the minimum possible size of a 3d tile.  (shorthand for grid-min-size) (default 0.15)
-  -o string             Specifies the output folder where to write the tileset data. (shorthand for output)
-  -output string        Specifies the output folder where to write the tileset data.
-  -r                    Enables recursive lookup for all .las files inside the subfolders (shorthand for recursive)
-  -recursive            Enables recursive lookup for all .las files inside the subfolders
-  -refine-mode          Type of refine mode, can be 'ADD' or 'REPLACE'. 'ADD' means that child tiles will not contain the parent tiles points. 'REPLACE' means that they will also contain the parent tiles points. ADD implies less disk space but more network overhead when fetching the data, REPLACE is the opposite. (default "ADD")
-  -s                    Use to suppress all the non-error messages. (shorthand for silent)
-  -silent               Use to suppress all the non-error messages.
-  -srid int             EPSG srid code of input points. (default 4326)
-  -t                    Adds timestamp to log messages. (shorthand for timestamp)
-  -timestamp            Adds timestamp to log messages.
-  -v                    Displays the version of gocesiumtiler. (shorthand for version)
-  -version              Displays the version of gocesiumtiler.
-  -x float              Max cell size in meters for the grid algorithm. It roughly represents the max spacing between any two samples.  (shorthand for grid-max-size) (default 5)
-  -z float              Vertical offset to apply to points, in meters. (shorthand for zoffset)
-  -zoffset float        Vertical offset to apply to points, in meters.
+   --out value, -o value                  full path of the output folder where to save the resulting Cesium tilesets
+   --epsg value, -e value                 EPSG code of the input coordinate system (default: -1)
+   --resolution value, -r value           minimum resolution of the 3d tiles, in meters. approximately represets the maximum sampling distance between any two points at the lowest level of detail (default: 20)
+   --z-offset value, -z value             z offset to apply to the point, in meters. only use it if the input elevation is referred to the WGS84 ellipsoid or geoid (default: 0)
+   --depth value, -d value                maximum depth of the output tree. (default: 10)
+   --min-points-per-tile value, -m value  minimum number of points to enforce in each 3D tile (default: 5000)
+   --geoid, -g                            set to interpret input points elevation as relative to the Earth geoid (default: false) 
+   --8-bit                                set to interpret the input points color as part of a 8bit color space (default: false)  
+   --help, -h                             show help
 ```
 
-Note: the "hq" flag present in versions <= 1.0.3 has been removed and replaced by the "randombox" setting for the `-algorithm` flag.
-
+#### Folder command flags
+These commands are specific to the `folder` command:
+```
+   --join, -j                             merge the input LAS files in the folder into a single cloud. The LAS files must have the same properties (CRS etc) (default: false)
+```
 
 ### Usage examples:
 
-Recursively convert all LAS files in folder `C:\las`, write output tilesets in folder `C:\out`, assume LAS input coordinates expressed 
-in EPSG:32633, convert elevation from above the geoid to above the ellipsoid and use the default grid sampling algorithm:
+#### Example 1
+Convert all LAS files in folder `C:\las`, write output tilesets in folder `C:\out`, assume LAS input coordinates expressed 
+in EPSG:32633, convert elevation from above the geoid to above the ellipsoid. Use a resolution of 10 meters, create tiles with minimum 1000 points
+and enforce a maximum tree depth of 12:
 
 ```
-gocesiumtiler -input=C:\las -output=C:\out -srid=32633 -geoid -folder -recursive 
+gocesiumtiler folder -out C:\out -epsg 32633 -geoid -resolution 10 -min-points-per-tile 1000 -depth 12 C:\las
 ```
+
 or, using the shorthand notation:
 ```
-gocesiumtiler -i C:\las -o C:\out -e 32633 -g -f -r
+gocesiumtiler folder -o C:\out -e 32633 -g -r 10 -m 1000 -d 12 C:\las
 ```
 
-Recursively convert all LAS files in `C:\las\file.las`, write output tileset in folder `C:\out`, assume input coordinates
-expressed in EPSG:4326, apply an offset of 10 meters to elevation of points and allow to store up to 100000 points per tile
-using the "randombox" algorithm:
+#### Example 2
+Like Example 1 but merge all LAS files in `C:\las` into a single 3D Tileset
 
 ```
-gocesiumtiler -input=C:\las\file.las -output=C:\out -zoffset=10 -maxpts=100000 -algorithm=randombox
+gocesiumtiler folder -out C:\out -epsg 32633 -geoid -resolution 10 -min-points-per-tile 1000 -depth 12 -join C:\las
+```
+
+or, using the shorthand notation:
+```
+gocesiumtiler folder -o C:\out -e 32633 -g -r 10 -m 1000 -d 12 -j C:\las
+```
+
+#### Example 3
+Convert a single LAS file at `C:\las\file.las`, write the output tileset in the folder `C:\out`, use the system defaults
+
+```
+gocesiumtiler file -out C:\out -epsg 32633 C:\las\file.las
 ```
 or, using the shorthand notation:
 
 ```
-gocesiumtiler -i C:\las\file.las -o C:\out -z 10 -m 100000 -a randombox
+gocesiumtiler file -o C:\out -e 32633 C:\las\file.las
 ```
 
 ### Algorithms
-As of now all the algorithms provided in the tool divide the space in an octree (i.e. a partition  of 8 octants recursively subdivided in octants as well).
-Every octant contains points plus 8 children, which are octants as well. These children octants might contain points and octants as well,
-in a recursive fashion.
 
-The difference between the algorithms is tied to how they choose the points to store in each level of the octree.
-
-- **Grid algorithm**
-This algorithm samples the space in a grid structure. For a `grid-max-size=5m` it stores one point every 5x5x5m box in the space,
-the closest one to the cell center. All the other points (the ones not closest to the 5x5x5 3D grid intersections) are sent to the
-children levels, where the grid halves in size, and the process is repeated until either the points are all stored or the grid size has 
-reached the `grid-min-size` setting. `grid-max-size` setting should be set accordingly to the input cloud size. A value that is too small
-might result in very dense tiles at higher LODs, a value that is too big might result in very few points stored ad higher LODs and 
-a highly nested tree structure.
-
-- **Random algorithm** 
-This algorithm simply shuffles all the points in the point cloud and picks at random up to `maxpts` points for each octree node.
-Shuffling allows to uniformely represent the overall shape of the point cloud, however this might imply that some details
-are not adequately represented at higher distances (lower Level of Details). 
-
-- **RandomBox algorithm** 
-This algorithm is very similar to the Random algorithm but with one difference. Points are divided into bins of a definite, small, size
-and the bins are randomly shuffled. Then the points are picked one by one from each bin. This ensures that points are randomly 
-distributed but also that all areas of space, even the ones with fewer points, are equally likely to be represented at higher level of details. 
-
-### Refine Modes
-Cesium tilesets can have two different *refine* settings, `ADD` and `REPLACE`, briefly explained as follow:
-- `ADD` refine mode means that a certain tile will contain only the points not already contained in the parent tiles. This 
-means that to render the points in the tile all parent tiles points must be fetched and loaded. In other words this mode 
-tells Cesium to display the Tile plus its parent.
-- `REPLACE` refine mode means that a certain tile will be self-contained, i.e. its `.pnts` file will contain ALL the points
-needed for rendering, including those already belonging to the parent tiles. In other words this mode instructs Cesium
-to only visualize this tile and not the points contained in its parent too.
-
-As a consequence in gocesiumtiler `ADD` mode results in smalled disk space as there are no duplicate points stored across
-LODs. Plus it is faster. In theory `REPLACE` mode might however be more memory and network efficient as Cesium can only visualize and load the
-required tile for the given LOD and not also the parent tiles, but this highly depends on how the Cesium Viewer settings
-have been configured. For this reason `ADD` mode is the default and suggested one, but one can specify `REPLACE` mode 
-by using `-refine-mode REPLACE`.
+The sampling occurs using a hybrid, lazy octree data structure. The algorithm works as follows:
+1. All points are stored in a linked tree: this provides efficient list manipulations operations (splitting, adding, removing) and avoids
+ dynamic allocations of slices. The coordinates are internally converted to EPSG 4978
+2. An octree cell is created. Every cell stores N points (variable). A cell also has a grid spacing property. The root node has a spacing set to the
+ provided resolution. 
+3. The points are traversed. Each point will fall into one of the cells the space has been divided by the given grid spacing. If the point is 
+ the closest one the the center of the cell, it's taken as new closest for that cell, else it's discarded and parked into a list of the Node octant it belongs to.
+4. When all points are traversed the points closes to the cells the space has been partitioned in will be the points for the current tree node. All others are parked.
+If an octant however has a number of parked points that is less than the min-points-per-node, the parked points for that octant are rolled up to the current node. Similarly 
+if the current node has a depth equal to the configured max depth.
+5. Whenever the children are retrieved, the previously parked points are used to create child nodes on demand using the same algorithm, lazily.
 
 ## Precompiled Binaries
 Along with the source code a prebuilt binary for Windows x64 is provided for each release of the tool in the github page.
@@ -216,14 +191,9 @@ Binaries for other systems at the moment are not provided.
 ## Future work and support
 
 Further work needs to be done, such as: 
-- Improving the test coverage and creating a test pipeline.
-- Adding an automatic setting to estabilish `grid-max-size` and `grid-min-size` values for the grid algorithm based on 
-the input point cloud parameters.
-- Adding support for non-metric units for elevations.
-- Integration with the [Draco](https://github.com/google/draco) compression library
+- Support for 3D Tiles v.1.1 and GLTF
 - Upgrading of the Proj4 library to versions newer than 4.9.2
-- Optimizations to reduce the memory footprint so to process bigger LAS files
-- Develop new sampling algorithms to increase the quality of the point cloud and/or processing speed
+- Adding support for non-metric units for elevations
  
 Contributors and their ideas are welcome.
 
@@ -232,7 +202,7 @@ If you have questions you can contact me at <m.federico.bonfigli@gmail.com>
 ## Versioning
 
 This library uses [SemVer](http://semver.org/) for versioning. 
-For the versions available, see the [tags on this repository](https://github.com/mfbonfigli/gocesiumtiler/tags). 
+For the versions available, see the [tags on this repository](https://github.com/mfbonfigli/gocesiumtiler/v2/tags). 
 
 ## Credits
 
