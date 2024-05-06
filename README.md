@@ -1,5 +1,5 @@
 # Go Cesium Tiler
-![Build Status](https://codebuild.eu-west-1.amazonaws.com/badges?uuid=eyJlbmNyeXB0ZWREYXRhIjoiTW5nSHpJcGJTQjJEekVQL2JsbUJWeVhmUHNZMFhsRGh6TXdPaGxSSlhHVkFCQ1RUUVM0YjJ6dWkyNmJaQmVKdE94RDVzNEhwbHZaOHJGakpCMkJCUG00PSIsIml2UGFyYW1ldGVyU3BlYyI6Im9COW9CVm9FM3ljQlR4RmQiLCJtYXRlcmlhbFNldFNlcmlhbCI6MX0%3D&branch=main)
+![Build Status](https://codebuild.eu-west-1.amazonaws.com/badges?uuid=eyJlbmNyeXB0ZWREYXRhIjoiTW5nSHpJcGJTQjJEekVQL2JsbUJWeVhmUHNZMFhsRGh6TXdPaGxSSlhHVkFCQ1RUUVM0YjJ6dWkyNmJaQmVKdE94RDVzNEhwbHZaOHJGakpCMkJCUG00PSIsIml2UGFyYW1ldGVyU3BlYyI6Im9COW9CVm9FM3ljQlR4RmQiLCJtYXRlcmlhbFNldFNlcmlhbCI6MX0%3D&branch=v2)
 ```
                                              _   _ _
   __ _  ___   ___ ___  ___(_)_   _ _ __ ___ | |_(_) | ___ _ __
