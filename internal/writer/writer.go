@@ -8,6 +8,7 @@ import (
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/conv/coor"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/conv/coor/proj4"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/tree"
+	"github.com/mfbonfigli/gocesiumtiler/v2/version"
 )
 
 // Writer writes a tree as a 3D Cesium Point cloud to the given output folder
@@ -20,8 +21,9 @@ type StandardWriter struct {
 	bufferRatio  int
 	basePath     string
 	conv         coor.CoordinateConverter
+	version      version.TilesetVersion
 	producerFunc func(basepath, folder string) Producer
-	consumerFunc func(coor.CoordinateConverter) Consumer
+	consumerFunc func(coor.CoordinateConverter, version.TilesetVersion) Consumer
 }
 
 func NewWriter(basePath string, conv coor.CoordinateConverter, options ...func(*StandardWriter)) (*StandardWriter, error) {
@@ -29,8 +31,14 @@ func NewWriter(basePath string, conv coor.CoordinateConverter, options ...func(*
 		basePath:     basePath,
 		numWorkers:   1,
 		bufferRatio:  5,
+		version:      version.TilesetVersion_1_0,
 		producerFunc: NewStandardProducer,
-		consumerFunc: NewStandardConsumer,
+		consumerFunc: func(cc coor.CoordinateConverter, v version.TilesetVersion) Consumer {
+			if v == version.TilesetVersion_1_0 {
+				return NewStandardConsumer(cc, WithGeometryEncoder(NewPntsEncoder()))
+			}
+			return NewStandardConsumer(cc, WithGeometryEncoder(NewGltfEncoder()))
+		},
 	}
 	for _, optFn := range options {
 		optFn(w)
@@ -45,15 +53,25 @@ func NewWriter(basePath string, conv coor.CoordinateConverter, options ...func(*
 	return w, nil
 }
 
+// WithNumWorkers defines how many writer goroutines to launch when writing the tiles.
 func WithNumWorkers(n int) func(*StandardWriter) {
 	return func(w *StandardWriter) {
 		w.numWorkers = n
 	}
 }
 
+// WithBufferRation defines how many jobs per writer worker to allow enqueuing.
 func WithBufferRatio(n int) func(*StandardWriter) {
 	return func(w *StandardWriter) {
 		w.bufferRatio = int(math.Max(1, float64(n)))
+	}
+}
+
+// WithTilesetVersion sets the version of the generated tilesets. version 1.0 generates .pnts gemetries
+// while version 1.1 generates .glb (gltf) geometries.
+func WithTilesetVersion(v version.TilesetVersion) func(*StandardWriter) {
+	return func(w *StandardWriter) {
+		w.version = v
 	}
 }
 
@@ -75,7 +93,7 @@ func (w *StandardWriter) Write(t tree.Tree, folderName string, ctx context.Conte
 	// add consumers to waitgroup and launch them
 	for i := 0; i < w.numWorkers; i++ {
 		waitGroup.Add(1)
-		consumer := w.consumerFunc(w.conv)
+		consumer := w.consumerFunc(w.conv, w.version)
 		go consumer.Consume(workChannel, errorChannel, &waitGroup)
 	}
 

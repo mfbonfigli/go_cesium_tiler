@@ -1,6 +1,10 @@
 package tiler
 
-import "runtime"
+import (
+	"runtime"
+
+	"github.com/mfbonfigli/gocesiumtiler/v2/version"
+)
 
 type TilerEvent int
 
@@ -28,6 +32,7 @@ type TilerOptions struct {
 	numWorkers       int
 	minPointsPerTile int
 	callback         TilerCallback
+	version          version.TilesetVersion
 }
 
 type tilerOptionsFn func(*TilerOptions)
@@ -45,6 +50,7 @@ func NewDefaultTilerOptions() *TilerOptions {
 		eightBitColors:   false,
 		geoidElevation:   false,
 		callback:         nil,
+		version:          version.TilesetVersion_1_0,
 	}
 }
 
@@ -115,5 +121,12 @@ func WithEightBitColors(eightBit bool) tilerOptionsFn {
 func WithGeoidElevation(geoid bool) tilerOptionsFn {
 	return func(opt *TilerOptions) {
 		opt.geoidElevation = geoid
+	}
+}
+
+// WithTilesetVersion sets the version of the tilsets to generate
+func WithTilesetVersion(v version.TilesetVersion) tilerOptionsFn {
+	return func(opt *TilerOptions) {
+		opt.version = v
 	}
 }

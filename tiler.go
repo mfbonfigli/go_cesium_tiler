@@ -52,7 +52,10 @@ func NewGoCesiumTiler() (*GoCesiumTiler, error) {
 			)
 		},
 		writerProvider: func(folder string, c coor.CoordinateConverter, opts *TilerOptions) (writer.Writer, error) {
-			return writer.NewWriter(folder, c, writer.WithNumWorkers(opts.numWorkers))
+			return writer.NewWriter(folder, c,
+				writer.WithNumWorkers(opts.numWorkers),
+				writer.WithTilesetVersion(opts.version),
+			)
 		},
 		lasReaderProvider: func(inputLasFiles []string, epsgCode int, eightbit bool) (las.LasReader, error) {
 			return las.NewCombinedFileLasReader(inputLasFiles, epsgCode, eightbit)

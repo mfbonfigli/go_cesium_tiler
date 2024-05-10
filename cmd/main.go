@@ -13,6 +13,7 @@ import (
 
 	tiler "github.com/mfbonfigli/gocesiumtiler/v2"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/utils"
+	"github.com/mfbonfigli/gocesiumtiler/v2/version"
 	"github.com/urfave/cli/v2"
 )
 
@@ -21,7 +22,7 @@ var tilerProvider func() (tiler.Tiler, error) = func() (tiler.Tiler, error) {
 	return tiler.NewGoCesiumTiler()
 }
 
-var version = "2.0.0-alpha"
+var cmdVersion = "2.0.0-beta"
 
 const logo = `
                            _                 _   _ _
@@ -42,7 +43,7 @@ func getCli(c *cliOpts) *cli.App {
 	return &cli.App{
 		Name:    "gocesiumtiler",
 		Usage:   "transforms LAS files into Cesium.JS 3D Tiles",
-		Version: version,
+		Version: cmdVersion,
 		Commands: []*cli.Command{
 			{
 				Name:  "file",
@@ -140,6 +141,13 @@ func getFlags(c *cliOpts) []cli.Flag {
 			Usage:       "set to interpret the input points color as part of a 8bit color space",
 			Destination: &c.eightBit,
 		},
+		&cli.StringFlag{
+			Name:        "version",
+			Aliases:     []string{"v"},
+			Value:       c.version,
+			Usage:       "sets the version of the tileset to generate. Could be either 1.0 or 1.1",
+			Destination: &c.version,
+		},
 	}
 }
 
@@ -153,6 +161,7 @@ type cliOpts struct {
 	geoid      bool
 	eightBit   bool
 	join       bool
+	version    string
 }
 
 func defaultCliOptions() *cliOpts {
@@ -165,6 +174,7 @@ func defaultCliOptions() *cliOpts {
 		geoid:      false,
 		eightBit:   false,
 		join:       false,
+		version:    "1.0",
 	}
 }
 
@@ -184,6 +194,9 @@ func (c *cliOpts) validate() {
 	if c.resolution < 0.5 || c.resolution > 1000 {
 		log.Fatal("resolution should be between 1 and 1000 meters")
 	}
+	if _, ok := version.Parse(c.version); !ok {
+		log.Fatal("invalid tileset version, the only allowed values are '1.0' and '1.1'")
+	}
 }
 
 func (c *cliOpts) print() {
@@ -196,12 +209,17 @@ func (c *cliOpts) print() {
 - Geoid elevation: %v,
 - 8Bit Color: %v
 - Join Clouds: %v
+- Tileset Version: %v
 
-`, c.epsg, c.maxDepth, c.resolution, c.minPoints, c.zOffset, c.geoid, c.eightBit, c.join)
+`, c.epsg, c.maxDepth, c.resolution, c.minPoints, c.zOffset, c.geoid, c.eightBit, c.join, c.version)
 }
 
 func (c *cliOpts) getTilerOptions() *tiler.TilerOptions {
 	c.validate()
+	v, ok := version.Parse(c.version)
+	if !ok {
+		log.Fatal("unrecongnized tileset version")
+	}
 	return tiler.NewTilerOptions(
 		tiler.WithEightBitColors(c.eightBit),
 		tiler.WithGeoidElevation(c.geoid),
@@ -210,6 +228,7 @@ func (c *cliOpts) getTilerOptions() *tiler.TilerOptions {
 		tiler.WithMaxDepth(c.maxDepth),
 		tiler.WithMinPointsPerTile(c.minPoints),
 		tiler.WithCallback(eventListener),
+		tiler.WithTilesetVersion(v),
 	)
 }
 

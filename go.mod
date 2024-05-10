@@ -10,7 +10,8 @@ require (
 
 require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.4 // indirect
-		github.com/russross/blackfriday/v2 v2.1.0 // indirect
+	github.com/qmuntal/gltf v0.25.0 // indirect
+	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/xeonx/geom v0.0.0-20151223130215-76a21efc1ce4 // indirect
 	github.com/xrash/smetrics v0.0.0-20240312152122-5f08fbb34913 // indirect
 )
