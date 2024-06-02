@@ -1,6 +1,10 @@
 package tiler
 
-import "context"
+import (
+	"context"
+
+	"github.com/mfbonfigli/gocesiumtiler/v2/version"
+)
 
 type MockTiler struct {
 	InputFiles          []string
@@ -18,6 +22,7 @@ type MockTiler struct {
 	PtsPerTile int
 	Depth      int
 	ElevOffset float64
+	Version    version.TilesetVersion
 	err        error
 }
 
@@ -34,6 +39,7 @@ func (m *MockTiler) ProcessFiles(inputLasFiles []string, outputFolder string, ep
 	m.PtsPerTile = opts.minPointsPerTile
 	m.Depth = opts.maxDepth
 	m.ElevOffset = opts.elevationOffset
+	m.Version = opts.version
 	return m.err
 }
 
@@ -50,5 +56,6 @@ func (m *MockTiler) ProcessFolder(inputFolder, outputFolder string, epsgCode int
 	m.PtsPerTile = opts.minPointsPerTile
 	m.Depth = opts.maxDepth
 	m.ElevOffset = opts.elevationOffset
+	m.Version = opts.version
 	return m.err
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/conv/coor"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/geom"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/tree"
+	"github.com/mfbonfigli/gocesiumtiler/v2/version"
 )
 
 func TestWriter(t *testing.T) {
@@ -51,7 +52,7 @@ func TestWriter(t *testing.T) {
 	w.producerFunc = func(basepath, folder string) Producer {
 		return p
 	}
-	w.consumerFunc = func(cc coor.CoordinateConverter) Consumer {
+	w.consumerFunc = func(cc coor.CoordinateConverter, v version.TilesetVersion) Consumer {
 		return c
 	}
 	err = w.Write(root, "base", context.TODO())
@@ -117,7 +118,7 @@ func TestWriterWithProducerError(t *testing.T) {
 	w.producerFunc = func(basepath, folder string) Producer {
 		return p
 	}
-	w.consumerFunc = func(cc coor.CoordinateConverter) Consumer {
+	w.consumerFunc = func(cc coor.CoordinateConverter, v version.TilesetVersion) Consumer {
 		return c
 	}
 	err = w.Write(root, "base", context.TODO())
@@ -183,7 +184,7 @@ func TestWriterWithConsumerError(t *testing.T) {
 	w.producerFunc = func(basepath, folder string) Producer {
 		return p
 	}
-	w.consumerFunc = func(cc coor.CoordinateConverter) Consumer {
+	w.consumerFunc = func(cc coor.CoordinateConverter, v version.TilesetVersion) Consumer {
 		return c
 	}
 	err = w.Write(root, "base", context.TODO())
@@ -203,5 +204,38 @@ func TestWriterWithConsumerError(t *testing.T) {
 		if c.Ec != p.Ec {
 			t.Errorf("passed different error channel to consumer")
 		}
+	}
+}
+
+func TestWriterTilesetVersion(t *testing.T) {
+	w, err := NewWriter("base", nil,
+		WithNumWorkers(1),
+		WithBufferRatio(10),
+		WithTilesetVersion(version.TilesetVersion_1_0),
+	)
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+	if w.version != version.TilesetVersion_1_0 {
+		t.Errorf("unexpected tileset version")
+	}
+	c := w.consumerFunc(nil, version.TilesetVersion_1_0)
+	if _, success := (c.(*StandardConsumer).encoder).(*PntsEncoder); success != true {
+		t.Errorf("unexpected geometry encoder for tileset version 1.0")
+	}
+	w, err = NewWriter("base", nil,
+		WithNumWorkers(1),
+		WithBufferRatio(10),
+		WithTilesetVersion(version.TilesetVersion_1_1),
+	)
+	if err != nil {
+		t.Fatalf("unexpected error %v", err)
+	}
+	if w.version != version.TilesetVersion_1_1 {
+		t.Errorf("unexpected tileset version")
+	}
+	c = w.consumerFunc(nil, version.TilesetVersion_1_1)
+	if _, success := (c.(*StandardConsumer).encoder).(*GltfEncoder); success != true {
+		t.Errorf("unexpected geometry encoder for tileset version 1.1")
 	}
 }

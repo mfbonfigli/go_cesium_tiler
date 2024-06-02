@@ -1,7 +1,9 @@
 package writer
 
+import "github.com/mfbonfigli/gocesiumtiler/v2/version"
+
 type Asset struct {
-	Version string `json:"version"`
+	Version version.TilesetVersion `json:"version"`
 }
 
 type Content struct {

@@ -19,6 +19,7 @@ such as color, laser intensity and classification.
 GoCesiumTiler V2 has been released in preview mode and it introduces several important improvements over V1:
 - Greatly reduced memory usage: you can expect a 60%+ reduction of memory consumption.
 - Faster: up to 15% faster compared to V1
+- Experimentally supports 3D Tiles v1.1 (GLTF) in addition to v1.0 (PNTS)
 - Allows reading and merging multiple LAS files in a single 3D Tile output (will load them all up in memory)
 - More intuitive fine tuning of the sampling quality and hard safeguards against deeply nested trees or small tiles
 - Assets embedded in the binary: no need to deploy the assets folder, works as a single portable binary
@@ -35,6 +36,19 @@ Some of these might be added in future minor updates of V2.
 ## Features
 Go Cesium Tiler automatically handles coordinate conversion to the format required by Cesium and can also 
 convert the elevation measured above the geoid to the elevation above the ellipsoid as by Cesium requirements. 
+
+The tool:
+- Performs automatic coordinate conversion without any external library dependency
+- Allows setting a elevation offset for the point clouds
+- Can merge multiple LAS files into a single tileset automatically
+- Contains logic to automatically perform EGM96 to WGSS84 geoid to ellipsoid elevation conversion
+- Supports both 3D Tiles Specs 1.0 (.pnts) and (experimentally) 3D Tiles v1.1 (GLTF/GLB assets)
+- Uses all available cores 
+- Samples the point cloud using an uniform sampling scheme
+- Can read LAS with colors encoded in 8bit color space rather than 16bit
+- Reads and injects in the output tileset Point Intensity and Classification values
+- Can be used in other GO programs as a library
+
 The tool uses the version 4.9.2 of the well-known Proj.4 library to handle coordinate conversion. The input SRID is
 specified by just providing the relative EPSG code, an internal dictionary converts it to the corresponding proj4 
 projection string.
@@ -45,6 +59,9 @@ the LAS in smaller chunks to be processed separately.
 
 Information on point intensity and classification is stored in the output tileset Batch Table under the 
 propeties named `INTENSITY` and `CLASSIFICATION`.
+
+## Demo
+You can preview a couple of tilesets generated from this tool at this [website](https://d39maarsub1d2t.cloudfront.net/index.html)
 
 
 ## Changelog
@@ -91,7 +108,7 @@ To check the test coverage use:
 go test -coverprofile cover.out -v  ./... && go tool cover -html=cover.out
 ```
 
-## Usage
+## CLI Usage
 
 To run just execute the binary tool with the appropriate flags.
 
@@ -170,7 +187,77 @@ or, using the shorthand notation:
 gocesiumtiler file -o C:\out -e 32633 C:\las\file.las
 ```
 
-### Algorithms
+### Known caveats
+
+#### 3D Tiles 1.1 - washed out colors
+
+From version `2.0.0-beta` support for 3D Tiles v1.1 specs has been added. 
+Cesium apparently by default tends to render the generated GLTF (.GLB) models with a "wrong" gamma value if compared to the equivalent .PNTS tilesets generated colors, resulting in washed out colors. 
+
+This can be corrected using a custom shader, for example refer to the following snippet:
+
+```
+const customShader = new Cesium.CustomShader({
+   varyings: {
+      v_selectedColor: Cesium.VaryingType.VEC3,
+   },
+   vertexShaderText: `
+   void vertexMain(VertexInput vsInput, inout czm_modelVertexOutput vsOutput) {
+      v_selectedColor = pow(vec3(vsInput.attributes.color_0), vec3(2.0));
+   }`,
+   // User uses the varying in the fragment shader
+   fragmentShaderText: `
+      void fragmentMain(FragmentInput fsInput, inout czm_modelMaterial material) {
+         material.diffuse = v_selectedColor.rgb;
+      }
+   `
+});
+tileset.customShader = customShader
+```
+
+## Library Usage in other GO programs
+
+To use the tiler in other go programs just:
+
+```
+go get github.com/mfbonfigli/gocesiumtiler/v2
+```
+
+Then instantiate a tiler object and launch it either via `ProcessFiles` or `ProcessFolder` passing in the desired processing options.
+
+A minimalistic example is:
+
+```
+package main
+
+import (
+	"context"
+	"log"
+
+	tiler "github.com/mfbonfigli/gocesiumtiler/v2"
+)
+
+func main() {
+	t, err := tiler.NewGoCesiumTiler()
+	if err != nil {
+		log.Fatal(err)
+	}
+	ctx := context.TODO()
+	err = t.ProcessFiles([]string{"myinput.las"}, "/tmp/myoutput", 32632, tiler.NewTilerOptions(
+		tiler.WithEightBitColors(true),
+		tiler.WithElevationOffset(34),
+		tiler.WithWorkerNumber(2),
+		tiler.WithMaxDepth(5),
+	), ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+```
+
+Note that you will require to use `cgo` for the compilation, for that refer to the section "Environment setup and compiling from sources". 
+
+## Algorithms
 
 The sampling occurs using a hybrid, lazy octree data structure. The algorithm works as follows:
 1. All points are stored in a linked tree: this provides efficient list manipulations operations (splitting, adding, removing) and avoids
@@ -191,9 +278,9 @@ Binaries for other systems at the moment are not provided.
 ## Future work and support
 
 Further work needs to be done, such as: 
-- Support for 3D Tiles v.1.1 and GLTF
 - Upgrading of the Proj4 library to versions newer than 4.9.2
 - Adding support for non-metric units for elevations
+- Add support for point cloud compression
  
 Contributors and their ideas are welcome.
 

@@ -8,6 +8,7 @@ import (
 
 	tiler "github.com/mfbonfigli/gocesiumtiler/v2"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/utils"
+	"github.com/mfbonfigli/gocesiumtiler/v2/version"
 )
 
 func TestDefaultTiler(t *testing.T) {
@@ -67,6 +68,9 @@ func TestMainProcessFile(t *testing.T) {
 	if actual := mockTiler.ElevOffset; actual != -1 {
 		t.Errorf("expected tiler to be called with ElevOffset %v but got %v", -1, actual)
 	}
+	if actual := mockTiler.Version; actual != version.TilesetVersion_1_0 {
+		t.Errorf("expected tiler to be called with Version %v but got %v", "1.0", actual)
+	}
 }
 
 func TestMainProcessFolder(t *testing.T) {
@@ -82,6 +86,7 @@ func TestMainProcessFolder(t *testing.T) {
 		"-depth", "13",
 		"-min-points-per-tile", "1200",
 		"-geoid", "-8-bit",
+		"-v", "1.0",
 		"myfolder"}
 	main()
 	if mockTiler.ProcessFolderCalled != true {
@@ -114,6 +119,9 @@ func TestMainProcessFolder(t *testing.T) {
 	if actual := mockTiler.ElevOffset; actual != -1 {
 		t.Errorf("expected tiler to be called with ElevOffset %v but got %v", -1, actual)
 	}
+	if actual := mockTiler.Version; actual != version.TilesetVersion_1_0 {
+		t.Errorf("expected tiler to be called with Version %v but got %v", "1.0", actual)
+	}
 }
 
 func TestMainProcessFolderJoin(t *testing.T) {
@@ -142,6 +150,7 @@ func TestMainProcessFolderJoin(t *testing.T) {
 		"-depth", "13",
 		"-min-points-per-tile", "1200",
 		"-geoid", "-8-bit",
+		"-v", "1.1",
 		"-join",
 		tmp}
 	main()
@@ -182,5 +191,8 @@ func TestMainProcessFolderJoin(t *testing.T) {
 	}
 	if actual := mockTiler.ElevOffset; actual != -1 {
 		t.Errorf("expected tiler to be called with ElevOffset %v but got %v", -1, actual)
+	}
+	if actual := mockTiler.Version; actual != version.TilesetVersion_1_1 {
+		t.Errorf("expected tiler to be called with Version %v but got %v", "1.1", actual)
 	}
 }
