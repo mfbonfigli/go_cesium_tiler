@@ -50,7 +50,7 @@ func unpackAssets() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("unable to unpack assets: %v", err)
 	}
-	temp, err := os.MkdirTemp(os.TempDir(), "gocestiler-proj4-assets-*")
+	temp, err := os.MkdirTemp(os.TempDir(), "gocesiumtiler-proj4-assets-*")
 	if err != nil {
 		return "", fmt.Errorf("unable to create temp folder for proj4 assets: %v", err)
 	}

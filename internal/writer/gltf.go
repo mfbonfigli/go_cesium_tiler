@@ -93,7 +93,6 @@ func (e *GltfEncoder) Write(node tree.Node, conv coor.CoordinateConverter, folde
 		Version:   "2.0",
 	}
 
-	indexes := make([]uint32, pts.Len())
 	coords := make([][3]float32, pts.Len())
 	colors := make([][3]uint8, pts.Len())
 
@@ -105,7 +104,6 @@ func (e *GltfEncoder) Write(node tree.Node, conv coor.CoordinateConverter, folde
 		if err != nil {
 			return err
 		}
-		indexes[i] = uint32(i)
 		coords[i][0] = float32(float64(pt.X) + cX - averageXYZ[0])
 		coords[i][1] = float32(float64(pt.Y) + cY - averageXYZ[1])
 		coords[i][2] = float32(float64(pt.Z) + cZ - averageXYZ[2])
@@ -135,7 +133,6 @@ func (e *GltfEncoder) Write(node tree.Node, conv coor.CoordinateConverter, folde
 		Name: "PointCloud",
 		Primitives: []*gltf.Primitive{{
 			Mode:       gltf.PrimitivePoints,
-			Indices:    gltf.Index(modeler.WriteIndices(doc, indexes)),
 			Attributes: attrs,
 			Extensions: gltf.Extensions{
 				"EXT_structural_metadata": json.RawMessage(`{"propertyAttributes": [0]}`),
