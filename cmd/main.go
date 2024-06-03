@@ -22,7 +22,7 @@ var tilerProvider func() (tiler.Tiler, error) = func() (tiler.Tiler, error) {
 	return tiler.NewGoCesiumTiler()
 }
 
-var cmdVersion = "2.0.0-beta"
+var cmdVersion = "2.0.0-gamma"
 
 const logo = `
                            _                 _   _ _
