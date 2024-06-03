@@ -423,6 +423,11 @@ func (t *GridTreeNode) getChildrenIndex(p geom.Point32) int {
 func (t *GridTreeNode) loadPoints(reader las.LasReader, cConv coor.CoordinateConverter, eConv elev.ElevationConverter, ctx context.Context) error {
 	numPts := reader.NumberOfPoints()
 
+	// Store all the points in a continuous memory space
+	// While not required, storing points in a contiguous array makes
+	// the system more CPU cache friendly and thus measurably faster
+	backingArray := make([]geom.LinkedPoint, numPts)
+
 	// all coordinates are referred as relative to the coordinates of the first point
 	baselinePt, err := reader.GetNext()
 	if err != nil {
@@ -432,7 +437,8 @@ func (t *GridTreeNode) loadPoints(reader las.LasReader, cConv coor.CoordinateCon
 	if err != nil {
 		return err
 	}
-	baselineGeomPt := &geom.LinkedPoint{Pt: baselinePt.ToPointFromBaseline(baselinePt)}
+	backingArray[0] = geom.LinkedPoint{Pt: baselinePt.ToPointFromBaseline(baselinePt)}
+	baselineGeomPt := &backingArray[0]
 
 	minX := baselinePt.X
 	minY := baselinePt.Y
@@ -473,10 +479,11 @@ func (t *GridTreeNode) loadPoints(reader las.LasReader, cConv coor.CoordinateCon
 	}
 
 	// CONSUMER: reads from the channel, transforms and stores the points
-	consume := func(i int) {
+	consume := func(workerId int, start int, count int) {
 		defer wg.Done()
 		var curNode *geom.LinkedPoint
-		for {
+		c := 0
+		for c < count {
 			if err := ctx.Err(); err != nil {
 				errchan <- err
 				return
@@ -494,8 +501,8 @@ func (t *GridTreeNode) loadPoints(reader las.LasReader, cConv coor.CoordinateCon
 				return
 			}
 
-			averages[i][0] = (averages[i][0]*float64(ptCounts[i]) + pt.X)
-			ptCounts[i]++
+			averages[workerId][0] = (averages[workerId][0]*float64(ptCounts[workerId]) + pt.X)
+			ptCounts[workerId]++
 			// update bounds estimation
 			mutex.Lock()
 			minX = math.Min(float64(pt.X), minX)
@@ -504,23 +511,36 @@ func (t *GridTreeNode) loadPoints(reader las.LasReader, cConv coor.CoordinateCon
 			maxX = math.Max(float64(pt.X), maxX)
 			maxY = math.Max(float64(pt.Y), maxY)
 			maxZ = math.Max(float64(pt.Z), maxZ)
-			newNode := &geom.LinkedPoint{Pt: pt.ToPointFromBaseline(baselinePt)}
+			backingArray[start+c] = geom.LinkedPoint{Pt: pt.ToPointFromBaseline(baselinePt)}
+			newNode := &backingArray[start+c]
 			if curNode == nil {
 				curNode = newNode
-				startPts[i] = curNode
+				startPts[workerId] = curNode
 			} else {
 				curNode.Next = newNode
 				curNode = newNode
-				endPts[i] = curNode
+				endPts[workerId] = curNode
 			}
 			mutex.Unlock()
+			c++
 		}
 	}
 
 	go produce()
+
+	// Launch the consumers, but first compute how many points each should read
+	// one point was already read at the beginning, so remove it from the total point count
+	basePtPerWorker := (numPts - 1) / t.loadWorkersNumber
+	residual := (numPts - 1) - basePtPerWorker*t.loadWorkersNumber
+	start := 1
 	for i := 0; i < t.loadWorkersNumber; i++ {
+		workerPtsNum := basePtPerWorker
+		if i < residual {
+			workerPtsNum += 1
+		}
 		wg.Add(1)
-		go consume(i)
+		go consume(i, start, workerPtsNum)
+		start = start + workerPtsNum
 	}
 
 	errs := []error{}

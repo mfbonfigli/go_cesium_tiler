@@ -18,7 +18,7 @@ such as color, laser intensity and classification.
 ## What's new: V2
 GoCesiumTiler V2 has been released in preview mode and it introduces several important improvements over V1:
 - Greatly reduced memory usage: you can expect a 60%+ reduction of memory consumption.
-- Faster: up to 15% faster compared to V1
+- Faster: up to 30% faster compared to V1
 - Experimentally supports 3D Tiles v1.1 (GLTF) in addition to v1.0 (PNTS)
 - Allows reading and merging multiple LAS files in a single 3D Tile output (will load them all up in memory)
 - More intuitive fine tuning of the sampling quality and hard safeguards against deeply nested trees or small tiles
@@ -260,8 +260,8 @@ Note that you will require to use `cgo` for the compilation, for that refer to t
 ## Algorithms
 
 The sampling occurs using a hybrid, lazy octree data structure. The algorithm works as follows:
-1. All points are stored in a linked tree: this provides efficient list manipulations operations (splitting, adding, removing) and avoids
- dynamic allocations of slices. The coordinates are internally converted to EPSG 4978
+1. All points are stored in a linked tree backed by an underlying array: this provides efficient list manipulations operations (splitting, adding, removing) and avoids
+ dynamic allocations of slices. The coordinates are internally converted to EPSG 4978. The backing array helps with CPU cache friendliness and helps achieving measurable speed improvements of up to 20% compared to a standard linked list.
 2. An octree cell is created. Every cell stores N points (variable). A cell also has a grid spacing property. The root node has a spacing set to the
  provided resolution. 
 3. The points are traversed. Each point will fall into one of the cells the space has been divided by the given grid spacing. If the point is 
