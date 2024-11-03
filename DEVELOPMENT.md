@@ -1,4 +1,4 @@
-# Go Cesium Tiler - Development
+# Go Cesium Tiler - Development Setup Guide
 
 ```
                                              _   _ _
@@ -147,7 +147,7 @@ Make sure `which cmake` points to the Msys2 - Mingw64 installation folder. If `$
 
 **9. Build gocesiumtiler**
 
-This requires some tinkering, depending on your development configuration you might have to tune parameters like the linker search path or the `PKG_CONFIG_PATH`.
+This could require some adaptations, and depending on your development configuration you might have to tune parameters like the linker search path or the `PKG_CONFIG_PATH`.
 
 The following is a general guide of a configuration that could work: 
 ```
@@ -167,7 +167,7 @@ $env:CGO_LDFLAGS="-L/vcpkg/installed/x64-mingw-static/lib -g -O2 -static -lstdc+
 go test -v ./...
 ```
 
-Of course the environment variables `PKG_CONFIG_PATH`, `CC`, `CGO_ENABLED`, `CGO_LDFLAGS` could also be stored permanently in the environment configuration so that the build and test commands become trivial:
+The environment variables `PKG_CONFIG_PATH`, `CC`, `CGO_ENABLED`, `CGO_LDFLAGS` could also be stored permanently in the environment configuration so that the build and test commands become trivial. 
 
 ```
 go build -o ./bin/gocesiumtiler.exe ./cmd/main.go
