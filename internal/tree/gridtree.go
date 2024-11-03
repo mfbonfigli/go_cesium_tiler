@@ -81,7 +81,7 @@ func WithMinPointsPerChildren(num int) func(t *GridTreeNode) {
 	}
 }
 
-func (t *GridTreeNode) Load(reader las.LasReader, coorConv coor.CoordinateConverter, elevConv elev.ElevationConverter, ctx context.Context) error {
+func (t *GridTreeNode) Load(reader las.LasReader, coorConv coor.ConverterFactory, elevConv elev.ElevationConverter, ctx context.Context) error {
 	return t.loadPoints(reader, coorConv, elevConv, ctx)
 }
 
@@ -226,15 +226,15 @@ func (t *GridTreeNode) Build() error {
 	return nil
 }
 
-func (t *GridTreeNode) GetInternalSrid() int {
-	return 4978
+func (t *GridTreeNode) GetInternalCRS() string {
+	return "EPSG:4978"
 }
 
 func (t *GridTreeNode) IsRoot() bool {
 	return t.depth == 0
 }
 
-func (t *GridTreeNode) GetBoundingBoxRegion(converter coor.CoordinateConverter) (geom.BoundingBox, error) {
+func (t *GridTreeNode) GetBoundingBoxRegion(conv coor.CoordinateConverter) (geom.BoundingBox, error) {
 	// the bounds are in a 3D earth centric coordinate system
 	// to be translated in Lat Lon EPSG 4979 we convert each corner of the box and
 	// take the min/max latitude, longitude and elevation of each point
@@ -279,35 +279,36 @@ func (t *GridTreeNode) GetBoundingBoxRegion(converter coor.CoordinateConverter) 
 		Y: bbox.Ymax + t.cY,
 		Z: bbox.Zmax + t.cZ,
 	}
-	p1c, err := converter.ToSrid(t.GetInternalSrid(), 4979, p1)
+	target := "EPSG:4979"
+	p1c, err := conv.Transform(t.GetInternalCRS(), target, p1)
 	if err != nil {
 		return geom.BoundingBox{}, err
 	}
-	p2c, err := converter.ToSrid(t.GetInternalSrid(), 4979, p2)
+	p2c, err := conv.Transform(t.GetInternalCRS(), target, p2)
 	if err != nil {
 		return geom.BoundingBox{}, err
 	}
-	p3c, err := converter.ToSrid(t.GetInternalSrid(), 4979, p3)
+	p3c, err := conv.Transform(t.GetInternalCRS(), target, p3)
 	if err != nil {
 		return geom.BoundingBox{}, err
 	}
-	p4c, err := converter.ToSrid(t.GetInternalSrid(), 4979, p4)
+	p4c, err := conv.Transform(t.GetInternalCRS(), target, p4)
 	if err != nil {
 		return geom.BoundingBox{}, err
 	}
-	p5c, err := converter.ToSrid(t.GetInternalSrid(), 4979, p5)
+	p5c, err := conv.Transform(t.GetInternalCRS(), target, p5)
 	if err != nil {
 		return geom.BoundingBox{}, err
 	}
-	p6c, err := converter.ToSrid(t.GetInternalSrid(), 4979, p6)
+	p6c, err := conv.Transform(t.GetInternalCRS(), target, p6)
 	if err != nil {
 		return geom.BoundingBox{}, err
 	}
-	p7c, err := converter.ToSrid(t.GetInternalSrid(), 4979, p7)
+	p7c, err := conv.Transform(t.GetInternalCRS(), target, p7)
 	if err != nil {
 		return geom.BoundingBox{}, err
 	}
-	p8c, err := converter.ToSrid(t.GetInternalSrid(), 4979, p8)
+	p8c, err := conv.Transform(t.GetInternalCRS(), target, p8)
 	if err != nil {
 		return geom.BoundingBox{}, err
 	}
@@ -420,7 +421,7 @@ func (t *GridTreeNode) getChildrenIndex(p geom.Point32) int {
 	return 7
 }
 
-func (t *GridTreeNode) loadPoints(reader las.LasReader, cConv coor.CoordinateConverter, eConv elev.ElevationConverter, ctx context.Context) error {
+func (t *GridTreeNode) loadPoints(reader las.LasReader, convFactory coor.ConverterFactory, eConv elev.ElevationConverter, ctx context.Context) error {
 	numPts := reader.NumberOfPoints()
 
 	// Store all the points in a continuous memory space
@@ -433,7 +434,13 @@ func (t *GridTreeNode) loadPoints(reader las.LasReader, cConv coor.CoordinateCon
 	if err != nil {
 		return err
 	}
-	baselinePt, err = t.transformPoint(baselinePt, cConv, eConv, reader.GetSrid())
+
+	conv, err := convFactory()
+	if err != nil {
+		return err
+	}
+	defer conv.Cleanup()
+	baselinePt, err = t.transformPoint(baselinePt, conv, eConv, reader.GetCRS())
 	if err != nil {
 		return err
 	}
@@ -480,6 +487,12 @@ func (t *GridTreeNode) loadPoints(reader las.LasReader, cConv coor.CoordinateCon
 
 	// CONSUMER: reads from the channel, transforms and stores the points
 	consume := func(workerId int, start int, count int) {
+		conv, err := convFactory()
+		if err != nil {
+			errchan <- err
+			return
+		}
+		defer conv.Cleanup()
 		defer wg.Done()
 		var curNode *geom.LinkedPoint
 		c := 0
@@ -495,7 +508,7 @@ func (t *GridTreeNode) loadPoints(reader las.LasReader, cConv coor.CoordinateCon
 				return
 			}
 
-			pt, err := t.transformPoint(pt, cConv, eConv, reader.GetSrid())
+			pt, err := t.transformPoint(pt, conv, eConv, reader.GetCRS())
 			if err != nil {
 				errchan <- err
 				return
@@ -588,7 +601,7 @@ func (t *GridTreeNode) GetCenter(cConv coor.CoordinateConverter) (float64, float
 	return t.cX, t.cY, t.cZ, nil
 }
 
-func (t *GridTreeNode) transformPoint(pt geom.Point64, cConv coor.CoordinateConverter, eConv elev.ElevationConverter, srid int) (geom.Point64, error) {
+func (t *GridTreeNode) transformPoint(pt geom.Point64, conv coor.CoordinateConverter, eConv elev.ElevationConverter, sourceCRS string) (geom.Point64, error) {
 	var err error
 	z := pt.Z
 	if eConv != nil {
@@ -598,16 +611,10 @@ func (t *GridTreeNode) transformPoint(pt geom.Point64, cConv coor.CoordinateConv
 		}
 	}
 
-	coords, err := cConv.ToWGS84Cartesian(
-		geom.Coord{
-			X: float64(pt.X),
-			Y: float64(pt.Y),
-			Z: float64(z),
-		}, srid,
-	)
+	out, err := conv.ToWGS84Cartesian(sourceCRS, geom.Coord{X: pt.X, Y: pt.Y, Z: z})
 	if err != nil {
 		return pt, err
 	}
-	pt.X, pt.Y, pt.Z = coords.X, coords.Y, coords.Z
+	pt.X, pt.Y, pt.Z = out.X, out.Y, out.Z
 	return pt, nil
 }

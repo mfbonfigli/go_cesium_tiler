@@ -24,6 +24,9 @@ var tilerProvider func() (tiler.Tiler, error) = func() (tiler.Tiler, error) {
 
 var cmdVersion = "2.0.0-gamma"
 
+// GitCommit is injected dynamically at build time via `go build -ldflags "-X main.GitCommit=XYZ"`
+var GitCommit string = "(na)"
+
 const logo = `
                            _                 _   _ _
   __ _  ___   ___ ___  ___(_)_   _ _ __ ___ | |_(_) | ___ _ __ 
@@ -32,18 +35,26 @@ const logo = `
  \__, |\___/ \___\___||___/_|\__,_|_| |_| |_|\__|_|_|\___|_|   
   __| | A Cesium Point Cloud tile generator written in golang
  |___/  Copyright YYYY - Massimo Federico Bonfigli    
-`
+        build: ZZZZ
+
+ `
+
+var profilerEnabled = false
 
 func main() {
 	printBanner()
 	getCli(defaultCliOptions()).Run(os.Args)
 }
 
+func getVersion() string {
+	return fmt.Sprintf("%s-%s", cmdVersion, GitCommit)
+}
+
 func getCli(c *cliOpts) *cli.App {
 	return &cli.App{
 		Name:    "gocesiumtiler",
 		Usage:   "transforms LAS files into Cesium.JS 3D Tiles",
-		Version: cmdVersion,
+		Version: getVersion(),
 		Commands: []*cli.Command{
 			{
 				Name:  "file",
@@ -93,12 +104,12 @@ func getFlags(c *cliOpts) []cli.Flag {
 			Usage:       "full path of the output folder where to save the resulting Cesium tilesets",
 			Destination: &c.output,
 		},
-		&cli.IntFlag{
-			Name:        "epsg",
-			Aliases:     []string{"e"},
-			Value:       c.epsg,
-			Usage:       "EPSG code of the input coordinate system",
-			Destination: &c.epsg,
+		&cli.StringFlag{
+			Name:        "crs",
+			Aliases:     []string{"e", "epsg"},
+			Value:       c.crs,
+			Usage:       "String representing the input CRS. For example, EPSG:4326 or a generic Proj4 string. Bare numbers will be interpreted as EPSG codes.",
+			Destination: &c.crs,
 		},
 		&cli.Float64Flag{
 			Name:        "resolution",
@@ -129,13 +140,6 @@ func getFlags(c *cliOpts) []cli.Flag {
 			Destination: &c.minPoints,
 		},
 		&cli.BoolFlag{
-			Name:        "geoid",
-			Aliases:     []string{"g"},
-			Value:       c.geoid,
-			Usage:       "set to interpret input points elevation as relative to the Earth geoid",
-			Destination: &c.geoid,
-		},
-		&cli.BoolFlag{
 			Name:        "8-bit",
 			Value:       c.eightBit,
 			Usage:       "set to interpret the input points color as part of a 8bit color space",
@@ -153,12 +157,11 @@ func getFlags(c *cliOpts) []cli.Flag {
 
 type cliOpts struct {
 	output     string
-	epsg       int
+	crs        string
 	maxDepth   int
 	minPoints  int
 	resolution float64
 	zOffset    float64
-	geoid      bool
 	eightBit   bool
 	join       bool
 	version    string
@@ -166,12 +169,11 @@ type cliOpts struct {
 
 func defaultCliOptions() *cliOpts {
 	return &cliOpts{
-		epsg:       -1,
+		crs:        "",
 		maxDepth:   10,
 		minPoints:  5000,
 		resolution: 20,
 		zOffset:    0,
-		geoid:      false,
 		eightBit:   false,
 		join:       false,
 		version:    "1.0",
@@ -182,8 +184,8 @@ func (c *cliOpts) validate() {
 	if c.output == "" {
 		log.Fatal("output flag must be set")
 	}
-	if c.epsg <= 0 {
-		log.Fatal("epsg code is invalid")
+	if c.crs == "" {
+		log.Fatal("source crs must be defined")
 	}
 	if c.maxDepth <= 1 || c.maxDepth > 20 {
 		log.Fatal("depth should be between 1 and 20")
@@ -201,17 +203,16 @@ func (c *cliOpts) validate() {
 
 func (c *cliOpts) print() {
 	fmt.Printf(`*** Execution settings:
-- EPSG Code: %d,
+- Source CRS: %s,
 - Max Depth: %d,
 - Resolution: %f meters,
 - Min Points per tile: %d
 - Z-Offset: %f meters,
-- Geoid elevation: %v,
 - 8Bit Color: %v
 - Join Clouds: %v
 - Tileset Version: %v
 
-`, c.epsg, c.maxDepth, c.resolution, c.minPoints, c.zOffset, c.geoid, c.eightBit, c.join, c.version)
+`, c.crs, c.maxDepth, c.resolution, c.minPoints, c.zOffset, c.eightBit, c.join, c.version)
 }
 
 func (c *cliOpts) getTilerOptions() *tiler.TilerOptions {
@@ -222,7 +223,6 @@ func (c *cliOpts) getTilerOptions() *tiler.TilerOptions {
 	}
 	return tiler.NewTilerOptions(
 		tiler.WithEightBitColors(c.eightBit),
-		tiler.WithGeoidElevation(c.geoid),
 		tiler.WithElevationOffset(c.zOffset),
 		tiler.WithGridSize(c.resolution),
 		tiler.WithMaxDepth(c.maxDepth),
@@ -240,8 +240,12 @@ func fileCommand(opts *cliOpts, filepath string) {
 	fmt.Printf("*** Mode: File, process LAS file at %s\n", filepath)
 	opts.print()
 	tilerOpts := opts.getTilerOptions()
+	crs := opts.crs
+	if code, err := strconv.Atoi(crs); err == nil {
+		crs = fmt.Sprintf("EPSG:%d", code)
+	}
 	runnable := func(ctx context.Context) error {
-		return t.ProcessFiles([]string{filepath}, opts.output, opts.epsg, tilerOpts, ctx)
+		return t.ProcessFiles([]string{filepath}, opts.output, crs, tilerOpts, ctx)
 	}
 	launch(runnable)
 }
@@ -254,15 +258,19 @@ func folderCommand(opts *cliOpts, folderpath string) {
 	fmt.Printf("*** Mode: Folder, process all files in %s\n", folderpath)
 	opts.print()
 	tilerOpts := opts.getTilerOptions()
+	crs := opts.crs
+	if code, err := strconv.Atoi(crs); err == nil {
+		crs = fmt.Sprintf("EPSG:%d", code)
+	}
 	runnable := func(ctx context.Context) error {
 		if opts.join {
 			files, err := utils.FindLasFilesInFolder(folderpath)
 			if err != nil {
 				return err
 			}
-			return t.ProcessFiles(files, opts.output, opts.epsg, tilerOpts, ctx)
+			return t.ProcessFiles(files, opts.output, crs, tilerOpts, ctx)
 		}
-		return t.ProcessFolder(folderpath, opts.output, opts.epsg, tilerOpts, ctx)
+		return t.ProcessFolder(folderpath, opts.output, crs, tilerOpts, ctx)
 	}
 	launch(runnable)
 }
@@ -286,5 +294,7 @@ func eventListener(e tiler.TilerEvent, filename string, elapsed int64, msg strin
 }
 
 func printBanner() {
-	fmt.Println(strings.ReplaceAll(logo, "YYYY", strconv.Itoa(time.Now().Year())))
+	banner := strings.ReplaceAll(logo, "YYYY", strconv.Itoa(time.Now().Year()))
+	banner = strings.ReplaceAll(banner, "ZZZZ", getVersion())
+	fmt.Println(banner)
 }

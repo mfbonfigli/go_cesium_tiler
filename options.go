@@ -28,7 +28,6 @@ type TilerOptions struct {
 	maxDepth         int
 	elevationOffset  float64
 	eightBitColors   bool
-	geoidElevation   bool
 	numWorkers       int
 	minPointsPerTile int
 	callback         TilerCallback
@@ -48,7 +47,6 @@ func NewDefaultTilerOptions() *TilerOptions {
 		numWorkers:       runtime.NumCPU(),
 		minPointsPerTile: 5000,
 		eightBitColors:   false,
-		geoidElevation:   false,
 		callback:         nil,
 		version:          version.TilesetVersion_1_0,
 	}
@@ -114,13 +112,6 @@ func WithCallback(callback TilerCallback) tilerOptionsFn {
 func WithEightBitColors(eightBit bool) tilerOptionsFn {
 	return func(opt *TilerOptions) {
 		opt.eightBitColors = eightBit
-	}
-}
-
-// WithGeoidElevation true tells the tiler to interpret the Z elevation as elevation over the geoid
-func WithGeoidElevation(geoid bool) tilerOptionsFn {
-	return func(opt *TilerOptions) {
-		opt.geoidElevation = geoid
 	}
 }
 

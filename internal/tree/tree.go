@@ -22,7 +22,7 @@ type Tree interface {
 	// Load loads the points into the tree. Must be called before any other operation on the tree.
 	// requires providing a coordinate and an elevation converter that will be used by the tree
 	// to internally perform coordinate conversions, as appropriate. The elevation converter can be nil.
-	Load(las.LasReader, coor.CoordinateConverter, elev.ElevationConverter, context.Context) error
+	Load(las.LasReader, coor.ConverterFactory, elev.ElevationConverter, context.Context) error
 }
 
 // Node models a generic node of a Tree. A node contains the points to show on its corresponding LoD.

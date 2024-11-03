@@ -35,14 +35,6 @@ furnished to do so, subject to the following conditions:
 The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
 
-
-##### Sean Barbeau [earth-gravitational-model](https://github.com/barbeau/earth-gravitational-model)
-*a Java port of the geotools EarthGravitationalModel code*
-(Go Cesium Tiler library carries a complete golang porting of the aforementioned Java library by Sean Barbeau)
-> N.B. This library does not explicitely state a licensing scheme, but as it is a porting of the GeoTools EarthGravitationalModel
-it is assumed that it uses the same LGPL license
-
-
 ##### TUM-GIS [cesium-point-cloud-generator](https://github.com/tum-gis/cesium-point-cloud-generator)
 *A small Java-based tool for the generation of point cloud visualization datasets according to Cesium 3D Tiles.*
 > This library has been the main source of inspiration in writing the Go Cesium Tiler library, in particular for 
