@@ -31,9 +31,9 @@ main() {
     echo -e "${Blue}done"
     echo -e "${Blue} => Starting dockerized build... "
     build_id="$(date +"%Y%m%d%H%M%S-%N")"
-    echo -e "${Blue} => Build id: $build_id"
+    echo -e "${Blue} => Build id: $build_id"#
     echo -e "${Blue} => Building..."
-    docker build -t gocesiumtiler:build --target=final --output .\\build --build-arg BUILD_ID=$build_id .
+    docker build -t gocesiumtiler:build --target=final --output ./build --build-arg BUILD_ID=$build_id .
     echo -e "${BoldGreen}=> Build complete, artifacts saved in: $(readlink -f ./build)"
 }
 
