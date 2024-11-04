@@ -7,17 +7,17 @@ import (
 )
 
 type MockLasReader struct {
-	Cur  int
-	Pts  []geom.Point64
-	Srid int
+	Cur int
+	Pts []geom.Point64
+	CRS string
 }
 
 // NumberOfPoints returns the number of points stored in the LAS file
 func (m *MockLasReader) NumberOfPoints() int {
 	return len(m.Pts)
 }
-func (m *MockLasReader) GetSrid() int {
-	return m.Srid
+func (m *MockLasReader) GetCRS() string {
+	return m.CRS
 }
 func (m *MockLasReader) GetNext() (geom.Point64, error) {
 	if m.Cur < len(m.Pts) {

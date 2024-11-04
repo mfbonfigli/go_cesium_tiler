@@ -1,21 +1,29 @@
 This library uses the following third party components:
 
-##### Simon Hege [proj4](https://github.com/xeonx/proj4)
-a go wrapper for v4.9.2 of Proj.4 library, released under MIT License:*
+##### Tom Payne [proj](https://github.com/twpayne/go-proj)
+a go wrapper for the Proj library, released under MIT License:
 
 The MIT License (MIT)
 
-Copyright (c) 2015 Simon HEGE
+Copyright (c) 2022 Tom Payne
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
-the Software, and to permit persons to whom the Software is furnished to do so,
-subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
 
 
 ##### John Lindsay [lidario](https://github.com/jblindsay/lidario)
@@ -34,14 +42,6 @@ furnished to do so, subject to the following conditions:
 
 The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
-
-
-##### Sean Barbeau [earth-gravitational-model](https://github.com/barbeau/earth-gravitational-model)
-*a Java port of the geotools EarthGravitationalModel code*
-(Go Cesium Tiler library carries a complete golang porting of the aforementioned Java library by Sean Barbeau)
-> N.B. This library does not explicitely state a licensing scheme, but as it is a porting of the GeoTools EarthGravitationalModel
-it is assumed that it uses the same LGPL license
-
 
 ##### TUM-GIS [cesium-point-cloud-generator](https://github.com/tum-gis/cesium-point-cloud-generator)
 *A small Java-based tool for the generation of point cloud visualization datasets according to Cesium 3D Tiles.*

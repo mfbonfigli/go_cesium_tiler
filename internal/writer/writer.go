@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/conv/coor"
-	"github.com/mfbonfigli/gocesiumtiler/v2/internal/conv/coor/proj4"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/tree"
 	"github.com/mfbonfigli/gocesiumtiler/v2/version"
 )
@@ -20,19 +19,20 @@ type StandardWriter struct {
 	numWorkers   int
 	bufferRatio  int
 	basePath     string
-	conv         coor.CoordinateConverter
+	convFactory  coor.ConverterFactory
 	version      version.TilesetVersion
 	producerFunc func(basepath, folder string) Producer
 	consumerFunc func(coor.CoordinateConverter, version.TilesetVersion) Consumer
 }
 
-func NewWriter(basePath string, conv coor.CoordinateConverter, options ...func(*StandardWriter)) (*StandardWriter, error) {
+func NewWriter(basePath string, convFactory coor.ConverterFactory, options ...func(*StandardWriter)) (*StandardWriter, error) {
 	w := &StandardWriter{
 		basePath:     basePath,
 		numWorkers:   1,
 		bufferRatio:  5,
 		version:      version.TilesetVersion_1_0,
 		producerFunc: NewStandardProducer,
+		convFactory:  convFactory,
 		consumerFunc: func(cc coor.CoordinateConverter, v version.TilesetVersion) Consumer {
 			if v == version.TilesetVersion_1_0 {
 				return NewStandardConsumer(cc, WithGeometryEncoder(NewPntsEncoder()))
@@ -42,13 +42,6 @@ func NewWriter(basePath string, conv coor.CoordinateConverter, options ...func(*
 	}
 	for _, optFn := range options {
 		optFn(w)
-	}
-	if w.conv == nil {
-		conv, err := proj4.NewProj4CoordinateConverter()
-		if err != nil {
-			return nil, err
-		}
-		w.conv = conv
 	}
 	return w, nil
 }
@@ -93,7 +86,12 @@ func (w *StandardWriter) Write(t tree.Tree, folderName string, ctx context.Conte
 	// add consumers to waitgroup and launch them
 	for i := 0; i < w.numWorkers; i++ {
 		waitGroup.Add(1)
-		consumer := w.consumerFunc(w.conv, w.version)
+		// instantiate a new converter per each goroutine for thread safety
+		c, err := w.convFactory()
+		if err != nil {
+			return err
+		}
+		consumer := w.consumerFunc(c, w.version)
 		go consumer.Consume(workChannel, errorChannel, &waitGroup)
 	}
 

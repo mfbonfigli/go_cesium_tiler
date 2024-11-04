@@ -21,6 +21,7 @@ type MockNode struct {
 	// invocation params
 	Las         las.LasReader
 	Conv        coor.CoordinateConverter
+	ConvFactory coor.ConverterFactory
 	Elev        elev.ElevationConverter
 	Ctx         context.Context
 	LoadCalled  bool
@@ -67,11 +68,11 @@ func (n *MockNode) GetRootNode() Node {
 func (n *MockNode) IsBuilt() bool {
 	return true
 }
-func (n *MockNode) Load(l las.LasReader, c coor.CoordinateConverter, e elev.ElevationConverter, ctx context.Context) error {
+func (n *MockNode) Load(l las.LasReader, c coor.ConverterFactory, e elev.ElevationConverter, ctx context.Context) error {
 	n.LoadCalled = true
 	n.Ctx = ctx
 	n.Las = l
-	n.Conv = c
+	n.ConvFactory = c
 	n.Elev = e
 	return nil
 }

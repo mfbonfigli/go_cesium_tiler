@@ -30,12 +30,12 @@ func TestMainProcessFile(t *testing.T) {
 	}
 	os.Args = []string{"gocesiumtiler", "file",
 		"-out", ".\\abc",
-		"-epsg", "4979",
+		"-crs", "EPSG:4979",
 		"-resolution", "11.1",
 		"-z-offset", "-1",
 		"-depth", "13",
 		"-min-points-per-tile", "1200",
-		"-geoid", "-8-bit",
+		"-8-bit",
 		"myfile.las"}
 	main()
 	if mockTiler.ProcessFilesCalled != true {
@@ -44,7 +44,7 @@ func TestMainProcessFile(t *testing.T) {
 	if actual := mockTiler.InputFiles; !reflect.DeepEqual(actual, []string{"myfile.las"}) {
 		t.Errorf("expected tiler to be called with %v but got %v", []string{"myfile.las"}, actual)
 	}
-	if actual := mockTiler.EpsgCode; actual != 4979 {
+	if actual := mockTiler.SourceCRS; actual != "EPSG:4979" {
 		t.Errorf("expected tiler to be called with epsg %v but got epsg %v", 4979, actual)
 	}
 	if actual := mockTiler.OutputFolder; actual != ".\\abc" {
@@ -52,9 +52,6 @@ func TestMainProcessFile(t *testing.T) {
 	}
 	if actual := mockTiler.EightBit; actual != true {
 		t.Errorf("expected tiler to be called with EightBit %v but got %v", true, actual)
-	}
-	if actual := mockTiler.GeoidElev; actual != true {
-		t.Errorf("expected tiler to be called with GeoidElev %v but got %v", true, actual)
 	}
 	if actual := mockTiler.GridSize; actual != 11.1 {
 		t.Errorf("expected tiler to be called with GridSize %v but got %v", 11.1, actual)
@@ -85,7 +82,7 @@ func TestMainProcessFolder(t *testing.T) {
 		"-z-offset", "-1",
 		"-depth", "13",
 		"-min-points-per-tile", "1200",
-		"-geoid", "-8-bit",
+		"-8-bit",
 		"-v", "1.0",
 		"myfolder"}
 	main()
@@ -95,7 +92,7 @@ func TestMainProcessFolder(t *testing.T) {
 	if actual := mockTiler.InputFolder; !reflect.DeepEqual(actual, "myfolder") {
 		t.Errorf("expected tiler to be called with %v but got %v", "myfolder", actual)
 	}
-	if actual := mockTiler.EpsgCode; actual != 4979 {
+	if actual := mockTiler.SourceCRS; actual != "EPSG:4979" {
 		t.Errorf("expected tiler to be called with epsg %v but got epsg %v", 4979, actual)
 	}
 	if actual := mockTiler.OutputFolder; actual != ".\\abc" {
@@ -103,9 +100,6 @@ func TestMainProcessFolder(t *testing.T) {
 	}
 	if actual := mockTiler.EightBit; actual != true {
 		t.Errorf("expected tiler to be called with EightBit %v but got %v", true, actual)
-	}
-	if actual := mockTiler.GeoidElev; actual != true {
-		t.Errorf("expected tiler to be called with GeoidElev %v but got %v", true, actual)
 	}
 	if actual := mockTiler.GridSize; actual != 11.1 {
 		t.Errorf("expected tiler to be called with GridSize %v but got %v", 11.1, actual)
@@ -149,7 +143,7 @@ func TestMainProcessFolderJoin(t *testing.T) {
 		"-z-offset", "-1",
 		"-depth", "13",
 		"-min-points-per-tile", "1200",
-		"-geoid", "-8-bit",
+		"-8-bit",
 		"-v", "1.1",
 		"-join",
 		tmp}
@@ -168,7 +162,7 @@ func TestMainProcessFolderJoin(t *testing.T) {
 	if actual := mockTiler.InputFiles; !reflect.DeepEqual(actual, expected) {
 		t.Errorf("expected tiler to be called with %v but got %v", expected, actual)
 	}
-	if actual := mockTiler.EpsgCode; actual != 4979 {
+	if actual := mockTiler.SourceCRS; actual != "EPSG:4979" {
 		t.Errorf("expected tiler to be called with epsg %v but got epsg %v", 4979, actual)
 	}
 	if actual := mockTiler.OutputFolder; actual != ".\\abc" {
@@ -176,9 +170,6 @@ func TestMainProcessFolderJoin(t *testing.T) {
 	}
 	if actual := mockTiler.EightBit; actual != true {
 		t.Errorf("expected tiler to be called with EightBit %v but got %v", true, actual)
-	}
-	if actual := mockTiler.GeoidElev; actual != true {
-		t.Errorf("expected tiler to be called with GeoidElev %v but got %v", true, actual)
 	}
 	if actual := mockTiler.GridSize; actual != 11.1 {
 		t.Errorf("expected tiler to be called with GridSize %v but got %v", 11.1, actual)

@@ -9,7 +9,6 @@ func TestOptions(t *testing.T) {
 		WithCallback(func(event TilerEvent, filename string, elapsed int64, msg string) {}),
 		WithEightBitColors(true),
 		WithElevationOffset(1),
-		WithGeoidElevation(true),
 		WithGridSize(11.1),
 		WithMaxDepth(12),
 		WithMinPointsPerTile(10),
@@ -24,9 +23,6 @@ func TestOptions(t *testing.T) {
 	}
 	if opts.elevationOffset != 1 {
 		t.Errorf("expected elevationOffset to be %v got %v", 1, opts.elevationOffset)
-	}
-	if opts.geoidElevation != true {
-		t.Errorf("expected geoidElevation to be %v got %v", true, opts.geoidElevation)
 	}
 	if opts.gridSize != 11.1 {
 		t.Errorf("expected gridSize to be %v got %v", 11.1, opts.gridSize)

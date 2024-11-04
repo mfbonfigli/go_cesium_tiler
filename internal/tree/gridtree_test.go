@@ -6,6 +6,7 @@ import (
 
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/geom"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/las"
+	"github.com/mfbonfigli/gocesiumtiler/v2/internal/utils"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/utils/test"
 )
 
@@ -20,7 +21,7 @@ func TestNewGridTreeWithMaxDepth(t *testing.T) {
 	if tree.IsRoot() != true {
 		t.Errorf("the tree object should be a root node")
 	}
-	if tree.GetInternalSrid() != 4978 {
+	if tree.GetInternalCRS() != "EPSG:4978" {
 		t.Errorf("A gridtree stores coordinates in EPSG:4978 SRID, but a different one was returned")
 	}
 	if tree.maxDepth != 12 {
@@ -45,7 +46,7 @@ func TestNewGridTreeWithDefaultDepth(t *testing.T) {
 	if tree.IsRoot() != true {
 		t.Errorf("the tree object should be a root node")
 	}
-	if tree.GetInternalSrid() != 4978 {
+	if tree.GetInternalCRS() != "EPSG:4978" {
 		t.Errorf("A gridtree stores coordinates in EPSG:4978 SRID, but a different one was returned")
 	}
 	if tree.maxDepth != 10 {
@@ -63,7 +64,7 @@ func TestGridTreeLoad(t *testing.T) {
 	// the grid size is kept big intentionally so that we have at most 1 point per octant during the tests
 	tree := NewGridTree(WithGridSize(1000000), WithMaxDepth(3), WithMinPointsPerChildren(1), WithLoadWorkersNumber(1))
 	reader := &las.MockLasReader{
-		Srid: 32633,
+		CRS: "EPSG:32633",
 		Pts: []geom.Point64{
 			{X: 432488.4714159001, Y: 4.705678720925195e+06, Z: 2.550538045727727, R: 160, G: 166, B: 203, Intensity: 7, Classification: 3},
 			{X: 432466.58372129063, Y: 4.705686414284739e+06, Z: 4.457767479175496, R: 186, G: 200, B: 237, Intensity: 7, Classification: 3},
@@ -96,10 +97,7 @@ func TestGridTreeLoad(t *testing.T) {
 	for i := range expectedAbsolute {
 		expected[i] = expectedAbsolute[i].ToPointFromBaseline(baseline)
 	}
-	conv, err := test.GetTestCoordinateConverter()
-	if err != nil {
-		t.Errorf("error provisioning the coordinate converter for the test: %v", err)
-	}
+	conv := test.GetTestCoordinateConverterFactory()
 	tree.Load(reader, conv, nil, context.TODO())
 	// verify the points are stored
 	cur := tree.pts
@@ -111,7 +109,7 @@ func TestGridTreeLoad(t *testing.T) {
 	}
 
 	// build
-	err = tree.Build()
+	err := tree.Build()
 	if err != nil {
 		t.Fatalf("unexpected error during tree build: %v", err)
 	}
@@ -129,7 +127,7 @@ func TestGridTreeBuild(t *testing.T) {
 	// the grid size is kept big intentionally so that we have at most 1 point per octant during the tests
 	tree := NewGridTree(WithGridSize(1000000), WithMaxDepth(3), WithMinPointsPerChildren(1))
 	reader := &las.MockLasReader{
-		Srid: 4978,
+		CRS: "EPSG:4978",
 		Pts: []geom.Point64{
 			{X: 0, Y: 0, Z: 0, R: 160, G: 166, B: 203, Intensity: 7, Classification: 3},
 			{X: -1, Y: -1, Z: -1, R: 186, G: 200, B: 237, Intensity: 7, Classification: 3},
@@ -161,10 +159,8 @@ func TestGridTreeBuild(t *testing.T) {
 	for i := range expectedAbsolute {
 		expected[i] = expectedAbsolute[i].ToPointFromBaseline(baseline)
 	}
-	conv, err := test.GetTestCoordinateConverter()
-	if err != nil {
-		t.Errorf("error provisioning the coordinate converter for the test: %v", err)
-	}
+	conv := test.GetTestCoordinateConverterFactory()
+
 	tree.Load(reader, conv, nil, context.TODO())
 	// verify the points are stored
 	cur := tree.pts
@@ -176,7 +172,7 @@ func TestGridTreeBuild(t *testing.T) {
 	}
 
 	// build
-	err = tree.Build()
+	err := tree.Build()
 	if err != nil {
 		t.Fatalf("unexpected error during tree build: %v", err)
 	}
@@ -270,7 +266,7 @@ func TestGetBoundingBoxRegion(t *testing.T) {
 	// the grid size is kept big intentionally so that we have at most 1 point per octant during the tests
 	tree := NewGridTree(WithGridSize(1000000), WithMaxDepth(3), WithMinPointsPerChildren(1))
 	reader := &las.MockLasReader{
-		Srid: 32633,
+		CRS: "EPSG:32633",
 		Pts: []geom.Point64{
 			{X: 432488.4714159001, Y: 4.705678720925195e+06, Z: 2.550538045727727, R: 160, G: 166, B: 203, Intensity: 7, Classification: 3},
 			{X: 432466.58372129063, Y: 4.705686414284739e+06, Z: 4.457767479175496, R: 186, G: 200, B: 237, Intensity: 7, Classification: 3},
@@ -285,9 +281,10 @@ func TestGetBoundingBoxRegion(t *testing.T) {
 		},
 	}
 
-	conv, err := test.GetTestCoordinateConverter()
+	conv := test.GetTestCoordinateConverterFactory()
+	coorConv, err := conv()
 	if err != nil {
-		t.Errorf("error provisioning the coordinate converter for the test: %v", err)
+		t.Errorf("unexpected error while initializing the converter: %v", err)
 	}
 	err = tree.Load(reader, conv, nil, context.TODO())
 	if err != nil {
@@ -297,7 +294,7 @@ func TestGetBoundingBoxRegion(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error during tree build: %v", err)
 	}
-	bbox, err := tree.GetBoundingBoxRegion(conv)
+	bbox, err := tree.GetBoundingBoxRegion(coorConv)
 	if err != nil {
 		t.Fatalf("unexpected error during tree build: %v", err)
 	}
@@ -312,7 +309,31 @@ func TestGetBoundingBoxRegion(t *testing.T) {
 		Ymid: 0.7417729861502648,
 		Zmid: 5.796027224976569,
 	}
-	if bbox != expected {
-		t.Errorf("expected %v got %v", expected, bbox)
+	if diff, err := utils.CompareWithTolerance(bbox.Xmin, expected.Xmin, 1e-8); err != nil {
+		t.Errorf("Xmin diff above threshold: %f", diff)
+	}
+	if diff, err := utils.CompareWithTolerance(bbox.Xmax, expected.Xmax, 1e-8); err != nil {
+		t.Errorf("Xmax diff above threshold: %f", diff)
+	}
+	if diff, err := utils.CompareWithTolerance(bbox.Xmid, expected.Xmid, 1e-8); err != nil {
+		t.Errorf("Xmid diff above threshold: %f", diff)
+	}
+	if diff, err := utils.CompareWithTolerance(bbox.Ymin, expected.Ymin, 1e-8); err != nil {
+		t.Errorf("Ymin diff above threshold: %f", diff)
+	}
+	if diff, err := utils.CompareWithTolerance(bbox.Ymax, expected.Ymax, 1e-8); err != nil {
+		t.Errorf("Ymax diff above threshold: %f", diff)
+	}
+	if diff, err := utils.CompareWithTolerance(bbox.Ymid, expected.Ymid, 1e-8); err != nil {
+		t.Errorf("Ymid diff above threshold: %f", diff)
+	}
+	if diff, err := utils.CompareWithTolerance(bbox.Zmin, expected.Zmin, 1e-8); err != nil {
+		t.Errorf("Zmin diff above threshold: %f", diff)
+	}
+	if diff, err := utils.CompareWithTolerance(bbox.Zmax, expected.Zmax, 1e-8); err != nil {
+		t.Errorf("Zmax diff above threshold: %f", diff)
+	}
+	if diff, err := utils.CompareWithTolerance(bbox.Zmid, expected.Zmid, 1e-8); err != nil {
+		t.Errorf("Zmid diff above threshold: %f", diff)
 	}
 }

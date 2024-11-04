@@ -20,7 +20,7 @@ func TestCombinedReader(t *testing.T) {
 		files = append(files, fmt.Sprintf("./testdata/%s", filename))
 	}
 
-	r, err := NewCombinedFileLasReader(files, 32633, false)
+	r, err := NewCombinedFileLasReader(files, "EPSG:32633", false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -29,8 +29,8 @@ func TestCombinedReader(t *testing.T) {
 		t.Errorf("expected %d points got %d", 10*len(files), actual)
 	}
 
-	if actual := r.GetSrid(); actual != 32633 {
-		t.Errorf("expected epsg %d got epsg %d", 32633, actual)
+	if actual := r.GetCRS(); actual != "EPSG:32633" {
+		t.Errorf("expected epsg %d got epsg %s", 32633, actual)
 	}
 
 	for i := 0; i < r.NumberOfPoints(); i++ {
@@ -80,7 +80,7 @@ func TestReader(t *testing.T) {
 
 	for _, e := range entries {
 		filename := e.Name()
-		r, err := NewFileLasReader(fmt.Sprintf("./testdata/%s", filename), 32633, false)
+		r, err := NewFileLasReader(fmt.Sprintf("./testdata/%s", filename), "EPSG:32633", false)
 		if err != nil {
 			t.Fatalf("unexpected error opening %v", err)
 		}
@@ -107,7 +107,7 @@ func TestReader(t *testing.T) {
 }
 
 func TestString(t *testing.T) {
-	r, _ := NewFileLasReader("./testdata/las-12-pf1.las", 123, false)
+	r, _ := NewFileLasReader("./testdata/las-12-pf1.las", "EPSG:123", false)
 	expected := `File Signature: LASF
 File Source ID: 0
 Global Encoding: 

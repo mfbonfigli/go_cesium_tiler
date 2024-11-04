@@ -74,7 +74,8 @@ type LasReader interface {
 	NumberOfPoints() int
 	// GetNext returns the next point in the las file
 	GetNext() (geom.Point64, error)
-	GetSrid() int
+	// GetCRS returns a string defining the CRS. This is typically a string of the form EPSG:XYZ where XYZ is the EPSG code of the CRS.
+	GetCRS() string
 }
 
 // CombinedFileLasReader enables reading a a list of LAS files as if they were a single one
@@ -84,15 +85,15 @@ type CombinedFileLasReader struct {
 	currentCount  int
 	readers       []*FileLasReader
 	numPts        int
-	srid          int
+	crs           string
 }
 
-func NewCombinedFileLasReader(files []string, srid int, eightBitColor bool) (*CombinedFileLasReader, error) {
+func NewCombinedFileLasReader(files []string, crs string, eightBitColor bool) (*CombinedFileLasReader, error) {
 	r := &CombinedFileLasReader{
-		srid: srid,
+		crs: crs,
 	}
 	for _, f := range files {
-		fr, err := NewFileLasReader(f, srid, eightBitColor)
+		fr, err := NewFileLasReader(f, crs, eightBitColor)
 		if err != nil {
 			return nil, err
 		}
@@ -106,8 +107,8 @@ func (m *CombinedFileLasReader) NumberOfPoints() int {
 	return m.numPts
 }
 
-func (m *CombinedFileLasReader) GetSrid() int {
-	return m.srid
+func (m *CombinedFileLasReader) GetCRS() string {
+	return m.crs
 }
 
 func (m *CombinedFileLasReader) GetNext() (geom.Point64, error) {
@@ -131,13 +132,13 @@ func (m *CombinedFileLasReader) GetNext() (geom.Point64, error) {
 type FileLasReader struct {
 	f             *lasFile
 	eightBitColor bool
-	srid          int
+	crs           string
 	r             io.Reader
 	current       int
 	sync.Mutex
 }
 
-func NewFileLasReader(fileName string, srid int, eightBitColor bool) (*FileLasReader, error) {
+func NewFileLasReader(fileName string, crs string, eightBitColor bool) (*FileLasReader, error) {
 	vlrs := []VLR{}
 	las := lasFile{fileName: fileName, Header: lasHeader{}, VlrData: vlrs}
 	var err error
@@ -153,7 +154,7 @@ func NewFileLasReader(fileName string, srid int, eightBitColor bool) (*FileLasRe
 	return &FileLasReader{
 		f:             &las,
 		eightBitColor: eightBitColor,
-		srid:          srid,
+		crs:           crs,
 	}, nil
 }
 
@@ -209,6 +210,6 @@ func (f *FileLasReader) GetNext() (geom.Point64, error) {
 	return out, nil
 }
 
-func (f *FileLasReader) GetSrid() int {
-	return f.srid
+func (f *FileLasReader) GetCRS() string {
+	return f.crs
 }

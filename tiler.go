@@ -8,9 +8,8 @@ import (
 	"time"
 
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/conv/coor"
-	"github.com/mfbonfigli/gocesiumtiler/v2/internal/conv/coor/proj4"
+	"github.com/mfbonfigli/gocesiumtiler/v2/internal/conv/coor/proj"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/conv/elev"
-	"github.com/mfbonfigli/gocesiumtiler/v2/internal/conv/elev/geoid2ellipsoid"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/las"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/tree"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/utils"
@@ -18,31 +17,29 @@ import (
 )
 
 type Tiler interface {
-	ProcessFiles(inputLasFiles []string, outputFolder string, epsgCode int, opts *TilerOptions, ctx context.Context) error
-	ProcessFolder(inputFolder, outputFolder string, epsgCode int, opts *TilerOptions, ctx context.Context) error
+	ProcessFiles(inputLasFiles []string, outputFolder string, sourceCRS string, opts *TilerOptions, ctx context.Context) error
+	ProcessFolder(inputFolder, outputFolder string, sourceCRS string, opts *TilerOptions, ctx context.Context) error
 }
 
 // GoCesiumTiler wraps the logic required to convert
 // LAS point clouds into Cesium 3D tiles
 type GoCesiumTiler struct {
-	cconv coor.CoordinateConverter
+	convFactory coor.ConverterFactory
 	treeProvider
 	writerProvider
 	lasReaderProvider
 }
 
 type treeProvider func(opts *TilerOptions) tree.Tree
-type writerProvider func(folder string, c coor.CoordinateConverter, opts *TilerOptions) (writer.Writer, error)
-type lasReaderProvider func(inputLasFiles []string, epsgCode int, eightbit bool) (las.LasReader, error)
+type writerProvider func(folder string, c coor.ConverterFactory, opts *TilerOptions) (writer.Writer, error)
+type lasReaderProvider func(inputLasFiles []string, sourceCRS string, eightbit bool) (las.LasReader, error)
 
 // NewGoCesiumTiler returns a new tiler to be used to convert LAS files into Cesium 3D Tiles
 func NewGoCesiumTiler() (*GoCesiumTiler, error) {
-	cconv, err := proj4.NewProj4CoordinateConverter()
-	if err != nil {
-		return nil, err
-	}
 	return &GoCesiumTiler{
-		cconv: cconv,
+		convFactory: func() (coor.CoordinateConverter, error) {
+			return proj.NewProjCoordinateConverter()
+		},
 		treeProvider: func(opts *TilerOptions) tree.Tree {
 			return tree.NewGridTree(
 				tree.WithGridSize(opts.gridSize),
@@ -51,28 +48,28 @@ func NewGoCesiumTiler() (*GoCesiumTiler, error) {
 				tree.WithMinPointsPerChildren(opts.minPointsPerTile),
 			)
 		},
-		writerProvider: func(folder string, c coor.CoordinateConverter, opts *TilerOptions) (writer.Writer, error) {
+		writerProvider: func(folder string, c coor.ConverterFactory, opts *TilerOptions) (writer.Writer, error) {
 			return writer.NewWriter(folder, c,
 				writer.WithNumWorkers(opts.numWorkers),
 				writer.WithTilesetVersion(opts.version),
 			)
 		},
-		lasReaderProvider: func(inputLasFiles []string, epsgCode int, eightbit bool) (las.LasReader, error) {
-			return las.NewCombinedFileLasReader(inputLasFiles, epsgCode, eightbit)
+		lasReaderProvider: func(inputLasFiles []string, sourceCRS string, eightbit bool) (las.LasReader, error) {
+			return las.NewCombinedFileLasReader(inputLasFiles, sourceCRS, eightbit)
 		},
 	}, nil
 }
 
 // ProcessFolder converts all LAS files found in the provided input folder converting them into separate tilesets
 // each tileset is stored in a subdirectory in the outputFolder named after the filename
-func (t *GoCesiumTiler) ProcessFolder(inputFolder, outputFolder string, epsgCode int, opts *TilerOptions, ctx context.Context) error {
+func (t *GoCesiumTiler) ProcessFolder(inputFolder, outputFolder string, sourceCRS string, opts *TilerOptions, ctx context.Context) error {
 	files, err := utils.FindLasFilesInFolder(inputFolder)
 	if err != nil {
 		return err
 	}
 	for _, f := range files {
 		subfolderName := strings.TrimSuffix(filepath.Base(f), filepath.Ext(f))
-		err := t.ProcessFiles([]string{f}, filepath.Join(outputFolder, subfolderName), epsgCode, opts, ctx)
+		err := t.ProcessFiles([]string{f}, filepath.Join(outputFolder, subfolderName), sourceCRS, opts, ctx)
 		if err != nil {
 			return err
 		}
@@ -81,7 +78,7 @@ func (t *GoCesiumTiler) ProcessFolder(inputFolder, outputFolder string, epsgCode
 }
 
 // ProcessFiles converts the specified LAS files as a single cesium tileset and stores them in the
-func (t *GoCesiumTiler) ProcessFiles(inputLasFiles []string, outputFolder string, epsgCode int, opts *TilerOptions, ctx context.Context) error {
+func (t *GoCesiumTiler) ProcessFiles(inputLasFiles []string, outputFolder string, sourceCRS string, opts *TilerOptions, ctx context.Context) error {
 	start := time.Now()
 	tr := t.treeProvider(opts)
 
@@ -92,7 +89,7 @@ func (t *GoCesiumTiler) ProcessFiles(inputLasFiles []string, outputFolder string
 
 	// PARSE LAS HEADER
 	emitEvent(EventReadLasHeaderStarted, opts, start, inputDesc, "start reading las")
-	lasFile, err := t.lasReaderProvider(inputLasFiles, epsgCode, opts.eightBitColors)
+	lasFile, err := t.lasReaderProvider(inputLasFiles, sourceCRS, opts.eightBitColors)
 	if err != nil {
 		emitEvent(EventReadLasHeaderError, opts, start, inputDesc, fmt.Sprintf("las read error: %v", err))
 		return err
@@ -104,16 +101,8 @@ func (t *GoCesiumTiler) ProcessFiles(inputLasFiles []string, outputFolder string
 	elevationConverters := []elev.ElevationConverter{
 		elev.NewOffsetElevationConverter(opts.elevationOffset),
 	}
-	if opts.geoidElevation {
-		egmCalc, err := geoid2ellipsoid.NewEGMCalculator(t.cconv)
-		if err != nil {
-			emitEvent(EventPointLoadingError, opts, start, inputDesc, fmt.Sprintf("converter init error: %v", err))
-			return err
-		}
-		elevationConverters = append(elevationConverters, elev.NewGeoidElevationConverter(epsgCode, egmCalc))
-	}
 	eConv := elev.NewPipelineElevationCorrector(elevationConverters...)
-	err = tr.Load(lasFile, t.cconv, eConv, ctx)
+	err = tr.Load(lasFile, t.convFactory, eConv, ctx)
 	if err != nil {
 		emitEvent(EventPointLoadingError, opts, start, inputDesc, fmt.Sprintf("load error: %v", err))
 		return err
@@ -131,7 +120,7 @@ func (t *GoCesiumTiler) ProcessFiles(inputLasFiles []string, outputFolder string
 
 	// EXPORT
 	emitEvent(EventExportStarted, opts, start, inputDesc, "export started")
-	w, err := t.writerProvider(outputFolder, t.cconv, opts)
+	w, err := t.writerProvider(outputFolder, t.convFactory, opts)
 	if err != nil {
 		emitEvent(EventBuildError, opts, start, inputDesc, fmt.Sprintf("export init error: %v", err))
 		return err

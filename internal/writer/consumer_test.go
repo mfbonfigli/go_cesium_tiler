@@ -14,11 +14,12 @@ import (
 )
 
 func TestConsume(t *testing.T) {
-	cv, err := test.GetTestCoordinateConverter()
+	cv := test.GetTestCoordinateConverterFactory()
+	conv, err := cv()
 	if err != nil {
-		t.Fatalf("unexpected error %v", err)
+		t.Errorf("unable to initialize the test converter: %v", err)
 	}
-	c := NewStandardConsumer(cv)
+	c := NewStandardConsumer(conv)
 	wc := make(chan *WorkUnit)
 	ec := make(chan error)
 	wg := &sync.WaitGroup{}
@@ -137,11 +138,12 @@ func TestConsume(t *testing.T) {
 }
 
 func TestConsumeGltf(t *testing.T) {
-	cv, err := test.GetTestCoordinateConverter()
+	cv := test.GetTestCoordinateConverterFactory()
+	conv, err := cv()
 	if err != nil {
-		t.Fatalf("unexpected error %v", err)
+		t.Errorf("unable to initialize the test converter: %v", err)
 	}
-	c := NewStandardConsumer(cv, WithGeometryEncoder(NewGltfEncoder()))
+	c := NewStandardConsumer(conv, WithGeometryEncoder(NewGltfEncoder()))
 	wc := make(chan *WorkUnit)
 	ec := make(chan error)
 	wg := &sync.WaitGroup{}

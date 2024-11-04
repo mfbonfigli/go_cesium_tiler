@@ -27,7 +27,7 @@ func TestTilerDefaults(t *testing.T) {
 	}
 	// this returns an error due to a non-esitant path
 	// but we ignore it on purpose for the sake of this test
-	l, _ := tiler.lasReaderProvider([]string{""}, 123, true)
+	l, _ := tiler.lasReaderProvider([]string{""}, "EPSG:123", true)
 	switch l.(type) {
 	case *las.CombinedFileLasReader:
 	default:
@@ -56,25 +56,25 @@ func TestTilerProcessFile(t *testing.T) {
 	l := &las.MockLasReader{}
 	opts := NewDefaultTilerOptions()
 	c := context.TODO()
-	tiler.writerProvider = func(folder string, c coor.CoordinateConverter, opts *TilerOptions) (writer.Writer, error) {
+	tiler.writerProvider = func(folder string, c coor.ConverterFactory, opts *TilerOptions) (writer.Writer, error) {
 		return w, nil
 	}
 	tiler.treeProvider = func(opts *TilerOptions) tree.Tree {
 		return tr
 	}
-	tiler.lasReaderProvider = func(inputLasFiles []string, epsgCode int, eightbit bool) (las.LasReader, error) {
+	tiler.lasReaderProvider = func(inputLasFiles []string, sourceCRS string, eightbit bool) (las.LasReader, error) {
 		return l, nil
 	}
 
-	tiler.ProcessFiles([]string{"abc.las"}, "out", 123, opts, c)
+	tiler.ProcessFiles([]string{"abc.las"}, "out", "EPSG:123", opts, c)
 	if !tr.LoadCalled {
 		t.Errorf("Load was not called on the tree")
 	}
 	if actual := tr.Las; actual != l {
 		t.Errorf("expected las reader %v got %v", l, actual)
 	}
-	if actual := tr.Conv; actual == nil {
-		t.Errorf("expected non-nil coordinate converter")
+	if actual := tr.ConvFactory; actual == nil {
+		t.Errorf("expected non-nil coordinate converter factory")
 	}
 	if actual := tr.Elev; actual == nil {
 		t.Errorf("expected non-nil elevation converter")
@@ -109,14 +109,14 @@ func TestTilerProcessFolder(t *testing.T) {
 	l := &las.MockLasReader{}
 	opts := NewDefaultTilerOptions()
 	c := context.TODO()
-	tiler.writerProvider = func(folder string, c coor.CoordinateConverter, opts *TilerOptions) (writer.Writer, error) {
+	tiler.writerProvider = func(folder string, c coor.ConverterFactory, opts *TilerOptions) (writer.Writer, error) {
 		return w, nil
 	}
 	tiler.treeProvider = func(opts *TilerOptions) tree.Tree {
 		return tr
 	}
 	files := []string{}
-	tiler.lasReaderProvider = func(inputLasFiles []string, epsgCode int, eightbit bool) (las.LasReader, error) {
+	tiler.lasReaderProvider = func(inputLasFiles []string, sourceCRS string, eightbit bool) (las.LasReader, error) {
 		files = append(files, inputLasFiles...)
 		return l, nil
 	}
@@ -131,15 +131,15 @@ func TestTilerProcessFolder(t *testing.T) {
 	utils.TouchFile(filepath.Join(tmp, "abc.las"))
 	utils.TouchFile(filepath.Join(tmp, "def.xyz"))
 	utils.TouchFile(filepath.Join(tmp, "ghi.las"))
-	tiler.ProcessFolder(tmp, "out", 123, opts, c)
+	tiler.ProcessFolder(tmp, "out", "EPSG:123", opts, c)
 	if !tr.LoadCalled {
 		t.Errorf("Load was not called on the tree")
 	}
 	if actual := tr.Las; actual != l {
 		t.Errorf("expected las reader %v got %v", l, actual)
 	}
-	if actual := tr.Conv; actual == nil {
-		t.Errorf("expected non-nil coordinate converter")
+	if actual := tr.ConvFactory; actual == nil {
+		t.Errorf("expected non-nil coordinate converter factory")
 	}
 	if actual := tr.Elev; actual == nil {
 		t.Errorf("expected non-nil elevation converter")

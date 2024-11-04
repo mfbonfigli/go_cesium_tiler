@@ -8,6 +8,7 @@ import (
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/conv/coor"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/geom"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/tree"
+	"github.com/mfbonfigli/gocesiumtiler/v2/internal/utils/test"
 	"github.com/mfbonfigli/gocesiumtiler/v2/version"
 )
 
@@ -40,7 +41,8 @@ func TestWriter(t *testing.T) {
 		},
 	}
 
-	w, err := NewWriter("base", nil,
+	w, err := NewWriter("base",
+		test.GetTestCoordinateConverterFactory(),
 		WithNumWorkers(1),
 		WithBufferRatio(10),
 	)
@@ -104,7 +106,8 @@ func TestWriterWithProducerError(t *testing.T) {
 		},
 	}
 
-	w, err := NewWriter("base", nil,
+	w, err := NewWriter("base",
+		test.GetTestCoordinateConverterFactory(),
 		WithNumWorkers(1),
 		WithBufferRatio(10),
 	)
@@ -170,7 +173,8 @@ func TestWriterWithConsumerError(t *testing.T) {
 		},
 	}
 
-	w, err := NewWriter("base", nil,
+	w, err := NewWriter("base",
+		test.GetTestCoordinateConverterFactory(),
 		WithNumWorkers(1),
 		WithBufferRatio(10),
 	)
@@ -208,7 +212,8 @@ func TestWriterWithConsumerError(t *testing.T) {
 }
 
 func TestWriterTilesetVersion(t *testing.T) {
-	w, err := NewWriter("base", nil,
+	w, err := NewWriter("base",
+		test.GetTestCoordinateConverterFactory(),
 		WithNumWorkers(1),
 		WithBufferRatio(10),
 		WithTilesetVersion(version.TilesetVersion_1_0),
