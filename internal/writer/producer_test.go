@@ -36,7 +36,7 @@ func TestProduce(t *testing.T) {
 	root := &tree.MockNode{
 		TotalNumPts: 5,
 		Pts:         stream,
-		Children: [8]tree.Node{
+		ChildNodes: [8]tree.Node{
 			nil,
 			child,
 		},
@@ -99,7 +99,7 @@ func TestProduceWithCancelOk(t *testing.T) {
 	root := &tree.MockNode{
 		TotalNumPts: 5,
 		Pts:         stream,
-		Children: [8]tree.Node{
+		ChildNodes: [8]tree.Node{
 			nil,
 			child,
 		},

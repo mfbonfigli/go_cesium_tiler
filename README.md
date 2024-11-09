@@ -24,6 +24,8 @@ gocesiumtiler V2 has been released in preview mode and it introduces several imp
 - More intuitive fine tuning of the sampling quality and hard safeguards against deeply nested trees or small tiles
 - Ready to be used as part of other go packages with an easy to use interface
 - Uses Proj v9.5.0: all projections supported by the Proj library are automatically supported by gocesiumtiler.
+- Points are now expressed wrt to a local cartesian reference system with Z-up. This results in tighter tile bounds that can
+improve the visualization in cesium.
 - Many bugfixes
 - Much greater unit test coverage
 
@@ -275,8 +277,7 @@ if the current node has a depth equal to the configured max depth.
 5. Whenever the children are retrieved, the previously parked points are used to create child nodes on demand using the same algorithm, lazily.
 
 ## Precompiled Binaries
-Along with the source code a prebuilt binary for Windows x64 is provided for each release of the tool in the github page.
-Binaries for other systems at the moment are not provided.
+Along with the source code, a prebuilt binary for both Linux and Windows x64 is provided for each release of the tool in the github page.
 
 ## Future work and support
 
@@ -300,7 +301,7 @@ For the versions available, see the [tags on this repository](https://github.com
 
 ## License
 
-This project is licensed under the GNU Lesser GPL v.3 License - see the [LICENSE.md](LICENSE.md) file for details.
+This project is licensed under the Mozilla Public License 2.0 - see the [LICENSE.md](LICENSE.md) file for details.
 
 The software uses third party code and libraries. Their licenses can be found in
 [LICENSE-3RD-PARTIES.md](LICENSE-3RD-PARTIES.md) file.

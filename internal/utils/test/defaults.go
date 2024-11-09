@@ -7,7 +7,7 @@ import (
 
 // GetTestCoordinateConverter returns the function to use to convert coordinates in tests
 func GetTestCoordinateConverterFactory() coor.ConverterFactory {
-	return func() (coor.CoordinateConverter, error) {
+	return func() (coor.Converter, error) {
 		return proj.NewProjCoordinateConverter()
 	}
 }

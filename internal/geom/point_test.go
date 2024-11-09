@@ -2,29 +2,26 @@ package geom
 
 import "testing"
 
-func TestToPointFromBaseline(t *testing.T) {
+func TestToLocal(t *testing.T) {
 	p := &Point64{
-		X:              10,
-		Y:              11,
-		Z:              12,
+		Vector3:        Vector3{X: 100, Y: 200, Z: 300},
 		R:              1,
 		G:              2,
 		B:              3,
 		Intensity:      4,
 		Classification: 5,
 	}
-	baseline := &Point64{
-		X:              5,
-		Y:              5,
-		Z:              5,
-		R:              2,
-		G:              2,
-		B:              2,
-		Intensity:      2,
-		Classification: 2,
+	expected := NewPoint32(-100, 300, 600, 1, 2, 3, 4, 5)
+
+	tr := Transform{
+		GlobalToLocal: Quaternion{
+			{0, -1, 0, 100},
+			{1, 0, 0, 200},
+			{0, 0, 1, 300},
+			{0, 0, 0, 1},
+		},
 	}
-	expected := NewPoint32(5, 6, 7, 1, 2, 3, 4, 5)
-	pt := p.ToPointFromBaseline(*baseline)
+	pt := p.ToLocal(tr)
 	if pt != expected {
 		t.Errorf("unexpected point, expected %v got %v", expected, pt)
 	}

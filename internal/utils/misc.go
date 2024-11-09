@@ -18,7 +18,7 @@ func CompareWithTolerance(actual, expected, tolerance float64) (diff float64, er
 	return diff, err
 }
 
-func CompareCoord(actual geom.Coord, expected geom.Coord, tolerance float64) error {
+func CompareCoord(actual geom.Vector3, expected geom.Vector3, tolerance float64) error {
 	if diff, err := CompareWithTolerance(actual.X, expected.X, tolerance); err != nil {
 		return fmt.Errorf("failed tolerance check on X coordinate, expected error less than %f but got %f error", tolerance, diff)
 	}

@@ -1,5 +1,5 @@
 package elev
 
-type ElevationConverter interface {
+type Converter interface {
 	ConvertElevation(x, y, z float64) (float64, error)
 }

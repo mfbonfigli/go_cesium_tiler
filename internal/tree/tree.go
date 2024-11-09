@@ -16,28 +16,24 @@ type Tree interface {
 	// Initializes the tree. Must be called before calling GetRootNode but after having called Load.
 	Build() error
 	// RootNode returns the root node of the tree
-	GetRootNode() Node
-	// IsBuilt returns if the tree has been previously initialized (built).
-	IsBuilt() bool
+	RootNode() Node
 	// Load loads the points into the tree. Must be called before any other operation on the tree.
 	// requires providing a coordinate and an elevation converter that will be used by the tree
 	// to internally perform coordinate conversions, as appropriate. The elevation converter can be nil.
-	Load(las.LasReader, coor.ConverterFactory, elev.ElevationConverter, context.Context) error
+	Load(las.LasReader, coor.ConverterFactory, elev.Converter, context.Context) error
 }
 
 // Node models a generic node of a Tree. A node contains the points to show on its corresponding LoD.
 // It must also be able to compute and return its children.
 type Node interface {
-	// GetBoundingBoxRegion returns the bounding box of the node, expressed
-	// in EPSG:4979 (WGS 84) coordinates. A coordinate converter must be passed as input.
-	GetBoundingBoxRegion(converter coor.CoordinateConverter) (geom.BoundingBox, error)
-	// GetChildren returns the 8 children of the current tree node. Some or
+	// BoundingBox returns the bounding box of the node, expressed in local coordinates
+	BoundingBox() geom.BoundingBox
+	// Children returns the 8 children of the current tree node. Some or
 	// all of these could be nil if not present.
-	GetChildren() [8]Node
-	// GetPoints returns  the points stored in the current node, not including those in the children.
-	// Points MUST be returned in EPSG 4978 coordinate system expressed as offsets from the Node Center (see GetCenter)
-	// a converter is provided if needed to perform the conversion
-	GetPoints(converter coor.CoordinateConverter) geom.Point32List
+	Children() [8]Node
+	// Points returns  the points stored in the current node, not including those in the children.
+	// Points will have coordinates expressed relative to the local reference system
+	Points() geom.Point32List
 	// TotalNumberOfPoints returns the number of points contained in this node AND all its children
 	TotalNumberOfPoints() int
 	// NumberOfPoints returns the number of points contained in this node, EXCLUDING its children
@@ -49,6 +45,8 @@ type Node interface {
 	// ComputeGeometricError returns an estimation, in meters, of the geometric error modeled
 	// by the current tree node.
 	ComputeGeometricError() float64
-	// GetCenter return the EPSG 4978 x,y,z coordinates relative to which the points for the node are referred to
-	GetCenter(converter coor.CoordinateConverter) (float64, float64, float64, error)
+	// TransformMatrix returns the Transform object to use to transform the coordinates from the
+	// node local CRS to the parent CRS. For a root node this can be used to transform the
+	// coordinates back to the EPSG 4978 (ECEF) coordinate system.
+	TransformMatrix() *geom.Transform
 }

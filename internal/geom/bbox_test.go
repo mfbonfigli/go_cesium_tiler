@@ -153,10 +153,16 @@ func TestNewBBoxFromParent(t *testing.T) {
 	}
 }
 
-func TestGetAsArray(t *testing.T) {
-	parent := NewBoundingBox(-10, 0, 10, 20, -100, 20)
-	expected := [6]float64{-10, 10, 0, 20, -100, 20}
-	if actual := parent.GetAsArray(); *(*[6]float64)(actual) != expected {
-		t.Errorf("expected %v got %v", expected, actual)
+func TestBBoxAsCesiumBox(t *testing.T) {
+	b := NewBoundingBox(-30, 10, 10, 20, -100, 20)
+	expected := [12]float64{
+		-10, 15, -40,
+		20, 0, 0,
+		0, 5, 0,
+		0, 0, 60,
+	}
+
+	if actual := b.AsCesiumBox(); actual != expected {
+		t.Errorf("expected boundingbox array %v got %v", expected, actual)
 	}
 }

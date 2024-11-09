@@ -12,6 +12,7 @@ import (
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/conv/elev"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/las"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/tree"
+	"github.com/mfbonfigli/gocesiumtiler/v2/internal/tree/grid"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/utils"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/writer"
 )
@@ -31,25 +32,25 @@ type GoCesiumTiler struct {
 }
 
 type treeProvider func(opts *TilerOptions) tree.Tree
-type writerProvider func(folder string, c coor.ConverterFactory, opts *TilerOptions) (writer.Writer, error)
+type writerProvider func(folder string, opts *TilerOptions) (writer.Writer, error)
 type lasReaderProvider func(inputLasFiles []string, sourceCRS string, eightbit bool) (las.LasReader, error)
 
 // NewGoCesiumTiler returns a new tiler to be used to convert LAS files into Cesium 3D Tiles
 func NewGoCesiumTiler() (*GoCesiumTiler, error) {
 	return &GoCesiumTiler{
-		convFactory: func() (coor.CoordinateConverter, error) {
+		convFactory: func() (coor.Converter, error) {
 			return proj.NewProjCoordinateConverter()
 		},
 		treeProvider: func(opts *TilerOptions) tree.Tree {
-			return tree.NewGridTree(
-				tree.WithGridSize(opts.gridSize),
-				tree.WithMaxDepth(opts.maxDepth),
-				tree.WithLoadWorkersNumber(opts.numWorkers),
-				tree.WithMinPointsPerChildren(opts.minPointsPerTile),
+			return grid.NewTree(
+				grid.WithGridSize(opts.gridSize),
+				grid.WithMaxDepth(opts.maxDepth),
+				grid.WithLoadWorkersNumber(opts.numWorkers),
+				grid.WithMinPointsPerChildren(opts.minPointsPerTile),
 			)
 		},
-		writerProvider: func(folder string, c coor.ConverterFactory, opts *TilerOptions) (writer.Writer, error) {
-			return writer.NewWriter(folder, c,
+		writerProvider: func(folder string, opts *TilerOptions) (writer.Writer, error) {
+			return writer.NewWriter(folder,
 				writer.WithNumWorkers(opts.numWorkers),
 				writer.WithTilesetVersion(opts.version),
 			)
@@ -98,7 +99,7 @@ func (t *GoCesiumTiler) ProcessFiles(inputLasFiles []string, outputFolder string
 
 	// LOAD POINTS
 	emitEvent(EventPointLoadingStarted, opts, start, inputDesc, "point loading started")
-	elevationConverters := []elev.ElevationConverter{
+	elevationConverters := []elev.Converter{
 		elev.NewOffsetElevationConverter(opts.elevationOffset),
 	}
 	eConv := elev.NewPipelineElevationCorrector(elevationConverters...)
@@ -120,7 +121,7 @@ func (t *GoCesiumTiler) ProcessFiles(inputLasFiles []string, outputFolder string
 
 	// EXPORT
 	emitEvent(EventExportStarted, opts, start, inputDesc, "export started")
-	w, err := t.writerProvider(outputFolder, t.convFactory, opts)
+	w, err := t.writerProvider(outputFolder, opts)
 	if err != nil {
 		emitEvent(EventBuildError, opts, start, inputDesc, fmt.Sprintf("export init error: %v", err))
 		return err

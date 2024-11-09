@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"path"
 
-	"github.com/mfbonfigli/gocesiumtiler/v2/internal/conv/coor"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/geom"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/tree"
 	"github.com/mfbonfigli/gocesiumtiler/v2/version"
@@ -71,18 +70,14 @@ func (e *GltfEncoder) Filename() string {
 	return "content.glb"
 }
 
-func NewGltfEncoder() GeometryEncoder {
+func NewGltfEncoder() *GltfEncoder {
 	return &GltfEncoder{}
 }
 
-func (e *GltfEncoder) Write(node tree.Node, conv coor.CoordinateConverter, folderPath string) error {
-	pts := node.GetPoints(conv)
-	cX, cY, cZ, err := node.GetCenter(conv)
-	if err != nil {
-		return err
-	}
+func (e *GltfEncoder) Write(node tree.Node, folderPath string) error {
+	pts := node.Points()
 	// Evaluating average X, Y, Z to express coords relative to tile center
-	averageXYZ, err := e.computeAverageXYZFromPointStream(pts, cX, cY, cZ)
+	averageXYZ, err := e.computeAverageXYZFromPointStream(pts)
 	if err != nil {
 		return err
 	}
@@ -104,9 +99,9 @@ func (e *GltfEncoder) Write(node tree.Node, conv coor.CoordinateConverter, folde
 		if err != nil {
 			return err
 		}
-		coords[i][0] = float32(float64(pt.X) + cX - averageXYZ[0])
-		coords[i][1] = float32(float64(pt.Y) + cY - averageXYZ[1])
-		coords[i][2] = float32(float64(pt.Z) + cZ - averageXYZ[2])
+		coords[i][0] = float32(float64(pt.X) - averageXYZ[0])
+		coords[i][1] = float32(float64(pt.Y) - averageXYZ[1])
+		coords[i][2] = float32(float64(pt.Z) - averageXYZ[2])
 		colors[i][0] = pt.R
 		colors[i][1] = pt.G
 		colors[i][2] = pt.B
@@ -160,7 +155,7 @@ func (e *GltfEncoder) Write(node tree.Node, conv coor.CoordinateConverter, folde
 	return gltf.SaveBinary(doc, pntsFilePath)
 }
 
-func (e *GltfEncoder) computeAverageXYZFromPointStream(pts geom.Point32List, cX, cY, cZ float64) ([]float64, error) {
+func (e *GltfEncoder) computeAverageXYZFromPointStream(pts geom.Point32List) ([]float64, error) {
 	var avgX, avgY, avgZ float64
 	n := pts.Len()
 	for i := 0; i < n; i++ {
@@ -168,9 +163,9 @@ func (e *GltfEncoder) computeAverageXYZFromPointStream(pts geom.Point32List, cX,
 		if err != nil {
 			return nil, err
 		}
-		avgX = (avgX / float64(i+1) * float64(i)) + (float64(pt.X)+cX)/float64(i+1)
-		avgY = (avgY / float64(i+1) * float64(i)) + (float64(pt.Y)+cY)/float64(i+1)
-		avgZ = (avgZ / float64(i+1) * float64(i)) + (float64(pt.Z)+cZ)/float64(i+1)
+		avgX = (avgX / float64(i+1) * float64(i)) + (float64(pt.X))/float64(i+1)
+		avgY = (avgY / float64(i+1) * float64(i)) + (float64(pt.Y))/float64(i+1)
+		avgZ = (avgZ / float64(i+1) * float64(i)) + (float64(pt.Z))/float64(i+1)
 	}
 	pts.Reset()
 	return []float64{avgX, avgY, avgZ}, nil

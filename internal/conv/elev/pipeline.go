@@ -1,10 +1,10 @@
 package elev
 
 type PipelineElevationConverter struct {
-	Converters []ElevationConverter
+	Converters []Converter
 }
 
-func NewPipelineElevationCorrector(elevationConverters ...ElevationConverter) *PipelineElevationConverter {
+func NewPipelineElevationCorrector(elevationConverters ...Converter) *PipelineElevationConverter {
 	return &PipelineElevationConverter{
 		Converters: elevationConverters,
 	}

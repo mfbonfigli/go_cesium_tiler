@@ -3,12 +3,13 @@ package writer
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path"
 	"strconv"
 	"sync"
 
-	"github.com/mfbonfigli/gocesiumtiler/v2/internal/conv/coor"
+	"github.com/mfbonfigli/gocesiumtiler/v2/internal/geom"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/tree"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/utils"
 	"github.com/mfbonfigli/gocesiumtiler/v2/version"
@@ -16,7 +17,7 @@ import (
 
 // GeometryEncoder encodes a tree.Node into a binary file, like a .pnts or .glb/.gltf files.
 type GeometryEncoder interface {
-	Write(n tree.Node, c coor.CoordinateConverter, folderPath string) error
+	Write(n tree.Node, folderPath string) error
 	TilesetVersion() version.TilesetVersion
 	Filename() string
 }
@@ -27,12 +28,10 @@ type Consumer interface {
 
 type StandardConsumer struct {
 	encoder GeometryEncoder
-	conv    coor.CoordinateConverter
 }
 
-func NewStandardConsumer(coordinateConverter coor.CoordinateConverter, optFn ...func(*StandardConsumer)) Consumer {
+func NewStandardConsumer(optFn ...func(*StandardConsumer)) Consumer {
 	c := &StandardConsumer{
-		conv:    coordinateConverter,
 		encoder: NewPntsEncoder(),
 	}
 	for _, fn := range optFn {
@@ -52,6 +51,11 @@ func WithGeometryEncoder(e GeometryEncoder) func(*StandardConsumer) {
 // continues working until work channel is closed or if an error is raised. In this last case submits the error to an error
 // channel before quitting
 func (c *StandardConsumer) Consume(workchan chan *WorkUnit, errchan chan error, waitGroup *sync.WaitGroup) {
+	defer func() {
+		if r := recover(); r != nil {
+			errchan <- fmt.Errorf("panic: %v", r)
+		}
+	}()
 	// signal waitgroup finished work
 	defer waitGroup.Done()
 	for {
@@ -85,7 +89,7 @@ func (c *StandardConsumer) doWork(workUnit *WorkUnit) error {
 		return err
 	}
 	// encodes and writes the geometries to the disk as a .pnts/.glb file
-	err = c.encoder.Write(node, c.conv, parentFolder)
+	err = c.encoder.Write(node, parentFolder)
 	if err != nil {
 		return err
 	}
@@ -150,23 +154,26 @@ func (c *StandardConsumer) generateTilesetJson(node tree.Node) ([]byte, error) {
 }
 
 func (c *StandardConsumer) generateTilesetRoot(node tree.Node) (Root, error) {
-	reg, err := node.GetBoundingBoxRegion(c.conv)
-
-	if err != nil {
-		return Root{}, err
-	}
+	reg := node.BoundingBox()
 
 	children, err := c.generateTilesetChildren(node)
 	if err != nil {
 		return Root{}, err
 	}
 
+	var cMajorTransformPtr *[16]float64
+	if trans := node.TransformMatrix(); trans != nil && trans.LocalToGlobal != geom.IdentityQuaternion {
+		cMajor := trans.LocalToGlobal.ColumnMajor()
+		cMajorTransformPtr = &cMajor
+	}
+
 	return Root{
 		Content:        Content{c.encoder.Filename()},
-		BoundingVolume: BoundingVolume{reg.GetAsArray()},
+		BoundingVolume: BoundingVolume{Box: reg.AsCesiumBox()},
 		GeometricError: node.ComputeGeometricError(),
 		Refine:         "ADD",
 		Children:       children,
+		Transform:      cMajorTransformPtr,
 	}, nil
 }
 
@@ -181,7 +188,7 @@ func (c *StandardConsumer) generateTileset(node tree.Node, root Root) Tileset {
 
 func (c *StandardConsumer) generateTilesetChildren(node tree.Node) ([]Child, error) {
 	var children []Child
-	for i, child := range node.GetChildren() {
+	for i, child := range node.Children() {
 		if c.nodeContainsPoints(child) {
 			childJson, err := c.generateTilesetChild(child, i)
 			if err != nil {
@@ -206,12 +213,9 @@ func (c *StandardConsumer) generateTilesetChild(child tree.Node, childIndex int)
 	childJson.Content = Content{
 		Url: strconv.Itoa(childIndex) + "/" + filename,
 	}
-	reg, err := child.GetBoundingBoxRegion(c.conv)
-	if err != nil {
-		return Child{}, err
-	}
+	reg := child.BoundingBox()
 	childJson.BoundingVolume = BoundingVolume{
-		Region: reg.GetAsArray(),
+		Box: reg.AsCesiumBox(),
 	}
 	childJson.GeometricError = child.ComputeGeometricError()
 	childJson.Refine = "ADD"

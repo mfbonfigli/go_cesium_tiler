@@ -8,7 +8,6 @@ import (
 	"path"
 	"strings"
 
-	"github.com/mfbonfigli/gocesiumtiler/v2/internal/conv/coor"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/geom"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/tree"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/utils"
@@ -26,18 +25,14 @@ func (e *PntsEncoder) Filename() string {
 	return "content.pnts"
 }
 
-func NewPntsEncoder() GeometryEncoder {
+func NewPntsEncoder() *PntsEncoder {
 	return &PntsEncoder{}
 }
 
-func (e *PntsEncoder) Write(node tree.Node, conv coor.CoordinateConverter, folderPath string) error {
-	pts := node.GetPoints(conv)
-	cX, cY, cZ, err := node.GetCenter(conv)
-	if err != nil {
-		return err
-	}
+func (e *PntsEncoder) Write(node tree.Node, folderPath string) error {
+	pts := node.Points()
 	// Evaluating average X, Y, Z to express coords relative to tile center
-	averageXYZ, err := e.computeAverageXYZFromPointStream(pts, cX, cY, cZ)
+	averageXYZ, err := e.computeAverageXYZFromPointStream(pts)
 	if err != nil {
 		return err
 	}
@@ -67,7 +62,7 @@ func (e *PntsEncoder) Write(node tree.Node, conv coor.CoordinateConverter, folde
 		return err
 	}
 
-	err = e.writePointCoords(pts, averageXYZ, cX, cY, cZ, wr)
+	err = e.writePointCoords(pts, averageXYZ, wr)
 	if err != nil {
 		return err
 	}
@@ -153,7 +148,7 @@ func (e *PntsEncoder) writeTable(tableBytes []byte, wr io.Writer) error {
 	return nil
 }
 
-func (e *PntsEncoder) writePointCoords(pts geom.Point32List, avgCoords []float64, cX, cY, cZ float64, wr io.Writer) error {
+func (e *PntsEncoder) writePointCoords(pts geom.Point32List, avgCoords []float64, wr io.Writer) error {
 	n := pts.Len()
 	// write coords
 	for i := 0; i < n; i++ {
@@ -161,15 +156,15 @@ func (e *PntsEncoder) writePointCoords(pts geom.Point32List, avgCoords []float64
 		if err != nil {
 			return err
 		}
-		err = utils.WriteTruncateFloat64ToFloat32(float64(pt.X)-avgCoords[0]+cX, wr)
+		err = utils.WriteTruncateFloat64ToFloat32(float64(pt.X)-avgCoords[0], wr)
 		if err != nil {
 			return err
 		}
-		err = utils.WriteTruncateFloat64ToFloat32(float64(pt.Y)-avgCoords[1]+cY, wr)
+		err = utils.WriteTruncateFloat64ToFloat32(float64(pt.Y)-avgCoords[1], wr)
 		if err != nil {
 			return err
 		}
-		err = utils.WriteTruncateFloat64ToFloat32(float64(pt.Z)-avgCoords[2]+cZ, wr)
+		err = utils.WriteTruncateFloat64ToFloat32(float64(pt.Z)-avgCoords[2], wr)
 		if err != nil {
 			return err
 		}
@@ -229,7 +224,7 @@ func (e *PntsEncoder) writePointClassifications(pts geom.Point32List, wr io.Writ
 	return nil
 }
 
-func (e *PntsEncoder) computeAverageXYZFromPointStream(pts geom.Point32List, cX, cY, cZ float64) ([]float64, error) {
+func (e *PntsEncoder) computeAverageXYZFromPointStream(pts geom.Point32List) ([]float64, error) {
 	var avgX, avgY, avgZ float64
 	n := pts.Len()
 	for i := 0; i < n; i++ {
@@ -237,9 +232,9 @@ func (e *PntsEncoder) computeAverageXYZFromPointStream(pts geom.Point32List, cX,
 		if err != nil {
 			return nil, err
 		}
-		avgX = (avgX / float64(i+1) * float64(i)) + (float64(pt.X)+cX)/float64(i+1)
-		avgY = (avgY / float64(i+1) * float64(i)) + (float64(pt.Y)+cY)/float64(i+1)
-		avgZ = (avgZ / float64(i+1) * float64(i)) + (float64(pt.Z)+cZ)/float64(i+1)
+		avgX = (avgX / float64(i+1) * float64(i)) + (float64(pt.X))/float64(i+1)
+		avgY = (avgY / float64(i+1) * float64(i)) + (float64(pt.Y))/float64(i+1)
+		avgZ = (avgZ / float64(i+1) * float64(i)) + (float64(pt.Z))/float64(i+1)
 	}
 	pts.Reset()
 	return []float64{avgX, avgY, avgZ}, nil

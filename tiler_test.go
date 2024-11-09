@@ -7,9 +7,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/mfbonfigli/gocesiumtiler/v2/internal/conv/coor"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/las"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/tree"
+	"github.com/mfbonfigli/gocesiumtiler/v2/internal/tree/grid"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/utils"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/writer"
 )
@@ -21,7 +21,7 @@ func TestTilerDefaults(t *testing.T) {
 	}
 	tr := tiler.treeProvider(NewDefaultTilerOptions())
 	switch tr.(type) {
-	case *tree.GridTreeNode:
+	case *grid.Node:
 	default:
 		t.Errorf("unexpected tree type returned")
 	}
@@ -35,7 +35,7 @@ func TestTilerDefaults(t *testing.T) {
 	}
 	// this returns an error due to a non-esitant path
 	// but we ignore it on purpose for the sake of this test
-	w, err := tiler.writerProvider("", nil, NewDefaultTilerOptions())
+	w, err := tiler.writerProvider("", NewDefaultTilerOptions())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -56,7 +56,7 @@ func TestTilerProcessFile(t *testing.T) {
 	l := &las.MockLasReader{}
 	opts := NewDefaultTilerOptions()
 	c := context.TODO()
-	tiler.writerProvider = func(folder string, c coor.ConverterFactory, opts *TilerOptions) (writer.Writer, error) {
+	tiler.writerProvider = func(folder string, opts *TilerOptions) (writer.Writer, error) {
 		return w, nil
 	}
 	tiler.treeProvider = func(opts *TilerOptions) tree.Tree {
@@ -109,7 +109,7 @@ func TestTilerProcessFolder(t *testing.T) {
 	l := &las.MockLasReader{}
 	opts := NewDefaultTilerOptions()
 	c := context.TODO()
-	tiler.writerProvider = func(folder string, c coor.ConverterFactory, opts *TilerOptions) (writer.Writer, error) {
+	tiler.writerProvider = func(folder string, opts *TilerOptions) (writer.Writer, error) {
 		return w, nil
 	}
 	tiler.treeProvider = func(opts *TilerOptions) tree.Tree {

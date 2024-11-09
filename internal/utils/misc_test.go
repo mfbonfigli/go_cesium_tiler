@@ -25,8 +25,8 @@ func TestCompareWithTolerance(t *testing.T) {
 }
 
 func TestCompareCoord(t *testing.T) {
-	actual := geom.Coord{X: 1, Y: 1, Z: 1}
-	reference := geom.Coord{X: 2, Y: 3, Z: 4}
+	actual := geom.Vector3{X: 1, Y: 1, Z: 1}
+	reference := geom.Vector3{X: 2, Y: 3, Z: 4}
 	err := CompareCoord(actual, reference, 5)
 	if err != nil {
 		t.Errorf("unexpected err %v", err)

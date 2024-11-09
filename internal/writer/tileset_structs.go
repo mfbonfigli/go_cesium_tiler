@@ -11,7 +11,7 @@ type Content struct {
 }
 
 type BoundingVolume struct {
-	Region []float64 `json:"region"`
+	Box [12]float64 `json:"box"`
 }
 
 type Child struct {
@@ -27,6 +27,7 @@ type Root struct {
 	BoundingVolume BoundingVolume `json:"boundingVolume"`
 	GeometricError float64        `json:"geometricError"`
 	Refine         string         `json:"refine"`
+	Transform      *[16]float64   `json:"transform,omitempty"`
 }
 
 type Tileset struct {

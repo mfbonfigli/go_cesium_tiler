@@ -8,9 +8,7 @@ import (
 // R,G,B color components, Intensity and Classification. Coordinates are expressed
 // as double precision float64 numbers.
 type Point64 struct {
-	X              float64
-	Y              float64
-	Z              float64
+	Vector3
 	R              uint8
 	G              uint8
 	B              uint8
@@ -18,13 +16,14 @@ type Point64 struct {
 	Classification uint8
 }
 
-// ToPointFromBaseline returns a Point from this Point64 with coordinates expressed as
-// offset from a baseline
-func (p Point64) ToPointFromBaseline(baseline Point64) Point32 {
+// ToLocal uses the provided transform to return a Point32 with local coordinates
+// obtained from the global coordinates of the Point64
+func (p Point64) ToLocal(t Transform) Point32 {
+	n := t.GlobalToLocal.Transform(p.Vector3)
 	return NewPoint32(
-		float32(p.X-baseline.X),
-		float32(p.Y-baseline.Y),
-		float32(p.Z-baseline.Z),
+		float32(n.X),
+		float32(n.Y),
+		float32(n.Z),
 		p.R,
 		p.G,
 		p.B,
@@ -82,7 +81,7 @@ type LinkedPointStream struct {
 }
 
 // NewLinkedPointStream initializes a linked stream from the given root.
-// the Count is not cross-verified, it must be coherent with the actual point count in the linked list.
+// the length is not cross-verified, it must be coherent with the actual point count in the linked list.
 func NewLinkedPointStream(root *LinkedPoint, len int) *LinkedPointStream {
 	return &LinkedPointStream{
 		len:     len,
