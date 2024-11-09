@@ -24,8 +24,8 @@ gocesiumtiler V2 has been released in preview mode and it introduces several imp
 - More intuitive fine tuning of the sampling quality and hard safeguards against deeply nested trees or small tiles
 - Ready to be used as part of other go packages with an easy to use interface
 - Uses Proj v9.5.0: all projections supported by the Proj library are automatically supported by gocesiumtiler.
-- Points are now expressed wrt to a local cartesian reference system with Z-up. This results in tighter tile bounds that can
-improve the visualization in cesium.
+- Points are now expressed wrt to a local cartesian reference system with Z-up. This results in tighter tile bounds, and
+  now shaders can fully utilize the local Z coordinate for elevation-based shading, which was not possible before.
 - Many bugfixes
 - Much greater unit test coverage
 
@@ -284,7 +284,8 @@ Along with the source code, a prebuilt binary for both Linux and Windows x64 is 
 Further work needs to be done, such as: 
 - Statically build and link Proj9.5.0 with CURL support enabled
 - Add support for point cloud compression
-- Express coordinates in a local reference system
+- Extract CRS metadata automatically from LAS VLRs
+- Add support for LAZ (compressed LAS) files
 
 Contributors and their ideas are welcome.
 

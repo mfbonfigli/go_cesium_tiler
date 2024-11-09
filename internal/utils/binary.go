@@ -26,10 +26,11 @@ func WriteUint16As2ByteShort(i uint16, w io.Writer) error {
 	return err
 }
 
-// Writes a float64 number as a float32 to the given writer
-func WriteTruncateFloat64ToFloat32(n float64, w io.Writer) error {
+// WriteFloat32LittleEndian writes a float32 number as a float32
+// in little endian notation to the given writer
+func WriteFloat32LittleEndian(n float32, w io.Writer) error {
 	bytes := make([]byte, 4)
-	binary.LittleEndian.PutUint32(bytes, math.Float32bits(float32(n)))
+	binary.LittleEndian.PutUint32(bytes, math.Float32bits(n))
 	_, err := w.Write(bytes)
 	return err
 }

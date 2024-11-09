@@ -142,7 +142,7 @@ func (c *StandardConsumer) generateTilesetJson(node tree.Node) ([]byte, error) {
 		tileset := c.generateTileset(node, root)
 
 		// Outputting a formatted json file
-		e, err := json.MarshalIndent(tileset, "", "\t")
+		e, err := json.Marshal(tileset)
 		if err != nil {
 			return nil, err
 		}

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"path"
 
-	"github.com/mfbonfigli/gocesiumtiler/v2/internal/geom"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/tree"
 	"github.com/mfbonfigli/gocesiumtiler/v2/version"
 	"github.com/qmuntal/gltf"
@@ -76,11 +75,6 @@ func NewGltfEncoder() *GltfEncoder {
 
 func (e *GltfEncoder) Write(node tree.Node, folderPath string) error {
 	pts := node.Points()
-	// Evaluating average X, Y, Z to express coords relative to tile center
-	averageXYZ, err := e.computeAverageXYZFromPointStream(pts)
-	if err != nil {
-		return err
-	}
 
 	doc := gltf.NewDocument()
 	doc.Asset = gltf.Asset{
@@ -99,9 +93,9 @@ func (e *GltfEncoder) Write(node tree.Node, folderPath string) error {
 		if err != nil {
 			return err
 		}
-		coords[i][0] = float32(float64(pt.X) - averageXYZ[0])
-		coords[i][1] = float32(float64(pt.Y) - averageXYZ[1])
-		coords[i][2] = float32(float64(pt.Z) - averageXYZ[2])
+		coords[i][0] = pt.X
+		coords[i][1] = pt.Y
+		coords[i][2] = pt.Z
 		colors[i][0] = pt.R
 		colors[i][1] = pt.G
 		colors[i][2] = pt.B
@@ -135,12 +129,11 @@ func (e *GltfEncoder) Write(node tree.Node, folderPath string) error {
 		}},
 	}}
 	// gltf is Y up, however Cesium is Z up. This means that a rotation transform needs to be applied.
-	// additionally a translation too needs to be applied as the coordinates are relative to their center
 	doc.Nodes = []*gltf.Node{
 		{
 			Name:   "PointCloud",
 			Mesh:   gltf.Index(0),
-			Matrix: [16]float64{1, 0, 0, 0, 0, 0, -1, 0, 0, 1, 0, 0, averageXYZ[0], averageXYZ[2], -averageXYZ[1], 1},
+			Matrix: [16]float64{1, 0, 0, 0, 0, 0, -1, 0, 0, 1, 0, 0, 0, 0, 0, 1},
 		},
 	}
 	doc.Scenes[0].Nodes = append(doc.Scenes[0].Nodes, 0)
@@ -153,20 +146,4 @@ func (e *GltfEncoder) Write(node tree.Node, folderPath string) error {
 
 	pntsFilePath := path.Join(folderPath, e.Filename())
 	return gltf.SaveBinary(doc, pntsFilePath)
-}
-
-func (e *GltfEncoder) computeAverageXYZFromPointStream(pts geom.Point32List) ([]float64, error) {
-	var avgX, avgY, avgZ float64
-	n := pts.Len()
-	for i := 0; i < n; i++ {
-		pt, err := pts.Next()
-		if err != nil {
-			return nil, err
-		}
-		avgX = (avgX / float64(i+1) * float64(i)) + (float64(pt.X))/float64(i+1)
-		avgY = (avgY / float64(i+1) * float64(i)) + (float64(pt.Y))/float64(i+1)
-		avgZ = (avgZ / float64(i+1) * float64(i)) + (float64(pt.Z))/float64(i+1)
-	}
-	pts.Reset()
-	return []float64{avgX, avgY, avgZ}, nil
 }

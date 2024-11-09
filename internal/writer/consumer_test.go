@@ -231,11 +231,11 @@ func TestConsumeGltf(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to read content.pnts: %v", err)
 	}
-	expectedPnts, err := os.ReadFile("./testdata/content.glb")
+	expectedGlb, err := os.ReadFile("./testdata/content.glb")
 	if err != nil {
 		t.Fatalf("unable to read tileset.json: %v", err)
 	}
-	if !reflect.DeepEqual(actualGlb, expectedPnts) {
-		t.Errorf("expected glb:\n%v\n\ngot:\n\n%v\n", expectedPnts, actualGlb)
+	if !reflect.DeepEqual(actualGlb, expectedGlb) {
+		t.Errorf("expected glb:\n%v\n\ngot:\n\n%v\n", expectedGlb, actualGlb)
 	}
 }
