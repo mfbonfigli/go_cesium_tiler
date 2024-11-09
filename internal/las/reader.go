@@ -203,9 +203,13 @@ func (f *FileLasReader) GetNext() (geom.Point64, error) {
 	out.Intensity = uint8(binary.LittleEndian.Uint16(data[intensityOffset : intensityOffset+2]))
 	classificationOffset := classificationOffets[header.PointFormatID]
 	classification := data[classificationOffset]
-	// the upper 3 high bits are used for metadata and not for the actual classification
-	// so wipe them out
-	out.Classification = uint8(classification & 0b00011111)
+	out.Classification = uint8(classification)
+
+	// for point types 1-5 the upper 3 high bits are used for metadata
+	// and not for the actual classification so wipe them out
+	if f.f.Header.PointFormatID < 6 {
+		out.Classification = out.Classification & 0b00011111
+	}
 
 	return out, nil
 }
