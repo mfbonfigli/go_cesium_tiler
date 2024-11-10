@@ -2,6 +2,7 @@ package writer
 
 import (
 	"encoding/json"
+	"math"
 	"path"
 
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/tree"
@@ -96,9 +97,13 @@ func (e *GltfEncoder) Write(node tree.Node, folderPath string) error {
 		coords[i][0] = pt.X
 		coords[i][1] = pt.Y
 		coords[i][2] = pt.Z
-		colors[i][0] = pt.R
-		colors[i][1] = pt.G
-		colors[i][2] = pt.B
+
+		// LAS colors are typically in the sRGB space, however GLTF specs require
+		// COLOR_0 for meshes to be in the linear RGB space, hence we need to convert
+		// the colors back to linear RGB
+		colors[i][0] = uint8(math.Pow((float64(pt.R)/255), 2.2) * 255)
+		colors[i][1] = uint8(math.Pow((float64(pt.G)/255), 2.2) * 255)
+		colors[i][2] = uint8(math.Pow((float64(pt.B)/255), 2.2) * 255)
 		intensities[i] = uint16(pt.Intensity)
 		classifications[i] = uint16(pt.Classification)
 	}

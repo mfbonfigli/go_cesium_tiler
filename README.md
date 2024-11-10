@@ -192,34 +192,6 @@ or, using the shorthand notation:
 gocesiumtiler file -o C:\out -e 32633 C:\las\file.las
 ```
 
-### Known caveats
-
-#### 3D Tiles 1.1 - washed out colors
-
-From version `2.0.0-beta` support for 3D Tiles v1.1 specs has been added. 
-Cesium apparently by default tends to render the generated GLTF (.GLB) models with a "wrong" gamma value if compared to the equivalent .PNTS tilesets generated colors, resulting in washed out colors. 
-
-This can be corrected using a custom shader, for example refer to the following snippet:
-
-```
-const customShader = new Cesium.CustomShader({
-   varyings: {
-      v_selectedColor: Cesium.VaryingType.VEC3,
-   },
-   vertexShaderText: `
-   void vertexMain(VertexInput vsInput, inout czm_modelVertexOutput vsOutput) {
-      v_selectedColor = pow(vec3(vsInput.attributes.color_0), vec3(2.0));
-   }`,
-   // User uses the varying in the fragment shader
-   fragmentShaderText: `
-      void fragmentMain(FragmentInput fsInput, inout czm_modelMaterial material) {
-         material.diffuse = v_selectedColor.rgb;
-      }
-   `
-});
-tileset.customShader = customShader
-```
-
 ## Library Usage in other GO programs
 
 To use the tiler in other go programs just:
