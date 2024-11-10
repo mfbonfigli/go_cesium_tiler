@@ -33,14 +33,19 @@ type Transform struct {
 	GlobalToLocal Quaternion
 }
 
-// Transform applies the quaternion to the input Vector3 returning
+// transformVector applies the quaternion to the input Vector3 returning
 // the resulting transformed Vector3
-func (q Quaternion) Transform(v Vector3) Vector3 {
+func (q Quaternion) transformVector(v Vector3) Vector3 {
 	return Vector3{
 		X: q[0][0]*v.X + q[0][1]*v.Y + q[0][2]*v.Z + q[0][3],
 		Y: q[1][0]*v.X + q[1][1]*v.Y + q[1][2]*v.Z + q[1][3],
 		Z: q[2][0]*v.X + q[2][1]*v.Y + q[2][2]*v.Z + q[2][3],
 	}
+}
+
+// Transform applies the quaternion to the input coordinates
+func (q Quaternion) Transform(x, y, z float64) Vector3 {
+	return q.transformVector(Vector3{X: x, Y: y, Z: z})
 }
 
 // ColumnMajor returns the quaternion represented as a linear array

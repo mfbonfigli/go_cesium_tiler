@@ -131,6 +131,7 @@ These flags are applicable to both the `file` and the `folder` commands
    --depth value, -d value                maximum depth of the output tree. (default: 10)
    --min-points-per-tile value, -m value  minimum number of points to enforce in each 3D tile (default: 5000)
    --8-bit                                set to interpret the input points color as part of a 8bit color space (default: false)  
+   --subsample value                      Approximate percent of points to keep in the final point cloud, between 0.01 (1%) and 1 (100%) (default: 1)
    --help, -h                             show help
 ```
 
@@ -222,7 +223,6 @@ func main() {
 	ctx := context.TODO()
 	err = t.ProcessFiles([]string{"myinput.las"}, "/tmp/myoutput", "EPSG:32632", tiler.NewTilerOptions(
 		tiler.WithEightBitColors(true),
-		tiler.WithElevationOffset(34),
 		tiler.WithWorkerNumber(2),
 		tiler.WithMaxDepth(5),
 	), ctx)
@@ -232,7 +232,47 @@ func main() {
 }
 ```
 
-Note that you will require to use `cgo` for the compilation, for how to setup the build environment please refer to the [DEVELOPMENT.md](DEVELOPMENT.md) . 
+Note that you will require to use `cgo` for the compilation, for how to setup the build environment please refer to the [DEVELOPMENT.md](DEVELOPMENT.md). 
+
+### Mutators
+
+gocesiumtiler from version 2.0.0 final offers the concept of **mutators**. Mutators are implementations of the `mutator.Mutator` interface 
+and can be used to manipulate or discard input points. 
+
+The library vends a `ZOffset` mutator to perform vertical traslation of point clouds and a `Subsampler` mutator to thin down the points in the output. 
+
+Other possible uses of mutators (not yet built in into the library) could be, for example:
+- Perform color corrections of points
+- Colorize the points based on their Classification
+- Cut point clouds discarding points outside of given bounds
+- etc
+
+To use the mutators just pass them to the tiler options:
+
+```
+mut := []mutator.Mutator{
+   mutator.NewZOffset(10),
+   mutator.NewSubsampler(0.5),
+}
+
+err = t.ProcessFiles([]string{"myinput.las"}, "/tmp/myoutput", "EPSG:32632", tiler.NewTilerOptions(
+		tiler.WithEightBitColors(true),
+		tiler.WithWorkerNumber(2),
+		tiler.WithMaxDepth(5),
+      tiler.WithMutators(mut)
+	), ctx)
+```
+
+To implement a custom mutator, implement the mutator interface:
+
+```
+Mutate(geom.Point32, geom.Transform) (geom.Point32, bool)
+```
+
+A mutator receives as input the original point and a Transform object that can be used to trasform back and forth from the local point CRS to EPSG 4978. 
+The output is the, eventually manipulated, point and a boolean which should be true if the point should appear in the final point cloud, false otherwise.
+
+Note: mutators must be goroutine safe.
 
 ## Algorithms
 

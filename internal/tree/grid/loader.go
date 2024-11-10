@@ -7,16 +7,16 @@ import (
 	"sync"
 
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/conv/coor"
-	"github.com/mfbonfigli/gocesiumtiler/v2/internal/conv/elev"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/geom"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/las"
+	"github.com/mfbonfigli/gocesiumtiler/v2/mutator"
 )
 
 // loader is a utility class used to read points from a las reader and initialize
 // a grid Node with the correct data
 type loader struct {
 	createCoorConverter coor.ConverterFactory
-	elevationConverter  elev.Converter
+	mutator             mutator.Mutator
 	workers             int
 }
 
@@ -34,21 +34,17 @@ func (l *loader) load(n *Node, r las.LasReader, ctx context.Context) (err error)
 	backingArray := make([]geom.LinkedPoint, numPts)
 
 	// read first point
-	first, err := r.GetNext()
-	if err != nil {
-		return err
-	}
 
 	c, err := l.createCoorConverter()
 	if err != nil {
 		return err
 	}
-	pt, err := transformPoint(first, c, l.elevationConverter, r.GetCRS())
+
+	// compute the baseline point and local CRS
+	transform, base, read, err := l.baseline(r, c)
 	if err != nil {
 		return err
 	}
-	// use first point as baseline
-	transform, base := l.baseline(pt)
 	backingArray[0] = base
 
 	// init concurrent vars
@@ -56,9 +52,9 @@ func (l *loader) load(n *Node, r las.LasReader, ctx context.Context) (err error)
 	var errchan chan error = make(chan error)
 
 	// launch consumers
-	basePtPerWorker := (numPts - 1) / l.workers
-	residual := (numPts - 1) - basePtPerWorker*l.workers
-	start := 1
+	basePtPerWorker := (numPts - read) / l.workers
+	residual := (numPts - read) - basePtPerWorker*l.workers
+	start := read
 	consumers := []*consumer{}
 	for i := 0; i < l.workers; i++ {
 		workerPtsNum := basePtPerWorker
@@ -70,7 +66,7 @@ func (l *loader) load(n *Node, r las.LasReader, ctx context.Context) (err error)
 			cancelFunc()
 			return err
 		}
-		consumers = append(consumers, newConsumer(i, start, workerPtsNum, conv, l.elevationConverter, r.GetCRS(), &backingArray))
+		consumers = append(consumers, newConsumer(i, start, workerPtsNum, conv, l.mutator, r.GetCRS(), &backingArray))
 		wg.Add(1)
 		go consumers[i].consume(r, transform, errchan, &wg, subCtx)
 		start = start + workerPtsNum
@@ -122,12 +118,35 @@ func (l *loader) load(n *Node, r las.LasReader, ctx context.Context) (err error)
 	return nil
 }
 
-// baseline returns a transform from EPSG 4978 to a local cartesian system centered in pt
-// and with Z normal to the WGS84 ellipsoid
-func (l *loader) baseline(pt geom.Point64) (geom.Transform, geom.LinkedPoint) {
-	transform := geom.LocalCRSFromPoint(pt.X, pt.Y, pt.Z)
-	baselinePtLocalCoords := pt.ToLocal(transform)
-	return transform, geom.LinkedPoint{Pt: baselinePtLocalCoords}
+// baseline fetches the first non-discarded point (mutators can discard points) and returns:
+// - The transform from EPSG 4978 a zenithal local CRS centered in the point
+// - the point, in local coordinates
+// - the number of points read from the point cloud
+// - An error in case the operation failed
+func (l *loader) baseline(r las.LasReader, c coor.Converter) (geom.Transform, geom.LinkedPoint, int, error) {
+	read := 0
+	for {
+		first, err := r.GetNext()
+		if err != nil {
+			return geom.Transform{}, geom.LinkedPoint{}, 0, err
+		}
+		read++
+		pt, err := transformPoint(first, c, r.GetCRS())
+		if err != nil {
+			return geom.Transform{}, geom.LinkedPoint{}, 0, err
+		}
+
+		transform := geom.LocalCRSFromPoint(pt.X, pt.Y, pt.Z)
+		baselinePtLocalCoords := pt.ToLocal(transform)
+		keep := true
+		if l.mutator != nil {
+			baselinePtLocalCoords, keep = l.mutator.Mutate(baselinePtLocalCoords, transform)
+			if !keep {
+				continue
+			}
+		}
+		return transform, geom.LinkedPoint{Pt: baselinePtLocalCoords}, read, nil
+	}
 }
 
 // consumer consumes points from the las reader storing them internally and updating its internal bounds
@@ -136,7 +155,7 @@ type consumer struct {
 	start        int
 	count        int
 	conv         coor.Converter
-	elev         elev.Converter
+	mutator      mutator.Mutator
 	crs          string
 	backingArray *[]geom.LinkedPoint
 	// output vars
@@ -145,13 +164,13 @@ type consumer struct {
 	endPt       *geom.LinkedPoint
 }
 
-func newConsumer(id int, start int, count int, conv coor.Converter, elev elev.Converter, crs string, backingArray *[]geom.LinkedPoint) *consumer {
+func newConsumer(id int, start int, count int, conv coor.Converter, mut mutator.Mutator, crs string, backingArray *[]geom.LinkedPoint) *consumer {
 	return &consumer{
 		id:           id,
 		start:        start,
 		count:        count,
 		conv:         conv,
-		elev:         elev,
+		mutator:      mut,
 		crs:          crs,
 		backingArray: backingArray,
 		bboxBuilder:  newBoundingBoxBuilder(),
@@ -179,7 +198,7 @@ func (c *consumer) consume(r las.LasReader, transform geom.Transform, errchan ch
 			return
 		}
 
-		pt, err = transformPoint(pt, c.conv, c.elev, c.crs)
+		pt, err = transformPoint(pt, c.conv, c.crs)
 		if err != nil {
 			errchan <- err
 			return
@@ -187,6 +206,17 @@ func (c *consumer) consume(r las.LasReader, transform geom.Transform, errchan ch
 
 		// transform local and update bounds
 		localPt := pt.ToLocal(transform)
+		keep := true
+
+		// mutate the point
+		if c.mutator != nil {
+			localPt, keep = c.mutator.Mutate(localPt, transform)
+			if !keep {
+				// point should be discarded, move on
+				i++
+				continue
+			}
+		}
 		c.bboxBuilder.processPoint(localPt.X, localPt.Y, localPt.Z)
 
 		// store point in backing array at the right offset
@@ -204,21 +234,15 @@ func (c *consumer) consume(r las.LasReader, transform geom.Transform, errchan ch
 	}
 }
 
-// transformPoint converts a point from the original CRS to EPSG:4978 eventually also manipulating the point elevation
-func transformPoint(pt geom.Point64, conv coor.Converter, eConv elev.Converter, sourceCRS string) (geom.Point64, error) {
+// transformPoint converts a point from the original CRS to EPSG:4978
+func transformPoint(pt geom.Point64, conv coor.Converter, sourceCRS string) (geom.Point64, error) {
 	var err error
-	z := pt.Z
-	if eConv != nil {
-		z, err = eConv.ConvertElevation(pt.X, pt.Y, pt.Z)
-		if err != nil {
-			return pt, err
-		}
-	}
 
-	out, err := conv.ToWGS84Cartesian(sourceCRS, geom.Vector3{X: pt.X, Y: pt.Y, Z: z})
+	out, err := conv.ToWGS84Cartesian(sourceCRS, geom.Vector3{X: pt.X, Y: pt.Y, Z: pt.Z})
 	if err != nil {
 		return pt, err
 	}
+
 	pt.X, pt.Y, pt.Z = out.X, out.Y, out.Z
 	return pt, nil
 }

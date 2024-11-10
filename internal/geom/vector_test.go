@@ -110,7 +110,7 @@ func TestQuaternionTransform(t *testing.T) {
 		{0, 0, 1, 30},
 		{0, 0, 0, 1},
 	}
-	actual := q.Transform(Vector3{X: 5, Y: -4, Z: 7})
+	actual := q.transformVector(Vector3{X: 5, Y: -4, Z: 7})
 	expected := Vector3{X: 15, Y: 16, Z: 37}
 	compareWithTolerance(expected, actual, t)
 
@@ -121,7 +121,7 @@ func TestQuaternionTransform(t *testing.T) {
 		{0, 0, 1, 0},
 		{0, 0, 0, 1},
 	}
-	actual = q.Transform(Vector3{X: 5, Y: -4, Z: 7})
+	actual = q.transformVector(Vector3{X: 5, Y: -4, Z: 7})
 	expected = Vector3{X: 4, Y: 5, Z: 7}
 	compareWithTolerance(expected, actual, t)
 
@@ -132,7 +132,7 @@ func TestQuaternionTransform(t *testing.T) {
 		{0, 1, 0, 0},
 		{0, 0, 0, 1},
 	}
-	actual = q.Transform(Vector3{X: 5, Y: -4, Z: 7})
+	actual = q.transformVector(Vector3{X: 5, Y: -4, Z: 7})
 	expected = Vector3{X: 5, Y: -7, Z: -4}
 	compareWithTolerance(expected, actual, t)
 
@@ -143,7 +143,7 @@ func TestQuaternionTransform(t *testing.T) {
 		{-1, 0, 0, 0},
 		{0, 0, 0, 1},
 	}
-	actual = q.Transform(Vector3{X: 5, Y: -4, Z: 7})
+	actual = q.transformVector(Vector3{X: 5, Y: -4, Z: 7})
 	expected = Vector3{X: 7, Y: -4, Z: -5}
 	compareWithTolerance(expected, actual, t)
 
@@ -154,7 +154,7 @@ func TestQuaternionTransform(t *testing.T) {
 		{0, 0, 1, 30},
 		{0, 0, 0, 1},
 	}
-	actual = q.Transform(Vector3{X: 5, Y: -4, Z: 7})
+	actual = q.transformVector(Vector3{X: 5, Y: -4, Z: 7})
 	expected = Vector3{X: 14, Y: 25, Z: 37}
 	compareWithTolerance(expected, actual, t)
 }
@@ -164,52 +164,56 @@ func TestLocalCRSFromPoint(t *testing.T) {
 	trans := LocalCRSFromPoint(origin.X, origin.Y, origin.Z)
 	// assert correctness indirectly
 	// should be centered in the input point
-	compareWithTolerance(origin, trans.LocalToGlobal.Transform(Vector3{}), t)
+	compareWithTolerance(origin, trans.LocalToGlobal.transformVector(Vector3{}), t)
 	// Z axis should be oriented correctly
-	compareWithTolerance(Vector3{X: 100 + 1, Y: 0, Z: 0}, trans.LocalToGlobal.Transform(Vector3{X: 0, Y: 0, Z: 1}), t)
-	compareWithTolerance(Vector3{X: 0, Y: 0, Z: 0}, trans.GlobalToLocal.Transform(Vector3{X: 100, Y: 0, Z: 0}), t)
+	compareWithTolerance(Vector3{X: 100 + 1, Y: 0, Z: 0}, trans.LocalToGlobal.transformVector(Vector3{X: 0, Y: 0, Z: 1}), t)
+	compareWithTolerance(Vector3{X: 0, Y: 0, Z: 0}, trans.GlobalToLocal.transformVector(Vector3{X: 100, Y: 0, Z: 0}), t)
 	// X axis should be oriented correctly
-	compareWithTolerance(Vector3{X: 100, Y: 0, Z: -1}, trans.LocalToGlobal.Transform(Vector3{X: 1, Y: 0, Z: 0}), t)
-	compareWithTolerance(Vector3{X: 1, Y: 0, Z: 0}, trans.GlobalToLocal.Transform(Vector3{X: 100, Y: 0, Z: -1}), t)
+	compareWithTolerance(Vector3{X: 100, Y: 0, Z: -1}, trans.LocalToGlobal.transformVector(Vector3{X: 1, Y: 0, Z: 0}), t)
+	compareWithTolerance(Vector3{X: 1, Y: 0, Z: 0}, trans.GlobalToLocal.transformVector(Vector3{X: 100, Y: 0, Z: -1}), t)
 	// Y axis should be oriented correctly
-	compareWithTolerance(Vector3{X: 100, Y: 1, Z: 0}, trans.LocalToGlobal.Transform(Vector3{X: 0, Y: 1, Z: 0}), t)
-	compareWithTolerance(Vector3{X: 0, Y: 1, Z: 0}, trans.GlobalToLocal.Transform(Vector3{X: 100, Y: 1, Z: 0}), t)
+	compareWithTolerance(Vector3{X: 100, Y: 1, Z: 0}, trans.LocalToGlobal.transformVector(Vector3{X: 0, Y: 1, Z: 0}), t)
+	compareWithTolerance(Vector3{X: 0, Y: 1, Z: 0}, trans.GlobalToLocal.transformVector(Vector3{X: 100, Y: 1, Z: 0}), t)
 
 	origin = Vector3{X: 0, Y: 100, Z: 0}
 	trans = LocalCRSFromPoint(origin.X, origin.Y, origin.Z)
 	// assert correctness indirectly
 	// should be centered in the input point
-	compareWithTolerance(origin, trans.LocalToGlobal.Transform(Vector3{}), t)
+	compareWithTolerance(origin, trans.LocalToGlobal.transformVector(Vector3{}), t)
 	// Z axis should be oriented correctly
-	compareWithTolerance(Vector3{X: 0, Y: 100 + 1, Z: 0}, trans.LocalToGlobal.Transform(Vector3{X: 0, Y: 0, Z: 1}), t)
+	compareWithTolerance(Vector3{X: 0, Y: 100 + 1, Z: 0}, trans.LocalToGlobal.transformVector(Vector3{X: 0, Y: 0, Z: 1}), t)
 	// X axis should be oriented correctly
-	compareWithTolerance(Vector3{X: 0, Y: 100, Z: 1}, trans.LocalToGlobal.Transform(Vector3{X: 1, Y: 0, Z: 0}), t)
+	compareWithTolerance(Vector3{X: 0, Y: 100, Z: 1}, trans.LocalToGlobal.transformVector(Vector3{X: 1, Y: 0, Z: 0}), t)
 	// Y axis should be oriented correctly
-	compareWithTolerance(Vector3{X: 1, Y: 100, Z: 0}, trans.LocalToGlobal.Transform(Vector3{X: 0, Y: 1, Z: 0}), t)
+	compareWithTolerance(Vector3{X: 1, Y: 100, Z: 0}, trans.LocalToGlobal.transformVector(Vector3{X: 0, Y: 1, Z: 0}), t)
 
 	origin = Vector3{X: 0, Y: 100, Z: 0}
 	trans = LocalCRSFromPoint(origin.X, origin.Y, origin.Z)
 	// assert correctness indirectly
 	// should be centered in the input point
-	compareWithTolerance(origin, trans.LocalToGlobal.Transform(Vector3{}), t)
+	compareWithTolerance(origin, trans.LocalToGlobal.transformVector(Vector3{}), t)
 	// Z axis should be oriented correctly
-	compareWithTolerance(Vector3{X: 0, Y: 100 + 1, Z: 0}, trans.LocalToGlobal.Transform(Vector3{X: 0, Y: 0, Z: 1}), t)
+	compareWithTolerance(Vector3{X: 0, Y: 100 + 1, Z: 0}, trans.LocalToGlobal.transformVector(Vector3{X: 0, Y: 0, Z: 1}), t)
 
 	origin = Vector3{X: -100, Y: 0, Z: 0}
 	trans = LocalCRSFromPoint(origin.X, origin.Y, origin.Z)
 	// assert correctness indirectly
 	// should be centered in the input point
-	compareWithTolerance(origin, trans.LocalToGlobal.Transform(Vector3{}), t)
+	compareWithTolerance(origin, trans.LocalToGlobal.transformVector(Vector3{}), t)
 	// Z axis should be oriented correctly
-	compareWithTolerance(Vector3{X: -100 - 1, Y: 0, Z: 0}, trans.LocalToGlobal.Transform(Vector3{X: 0, Y: 0, Z: 1}), t)
+	compareWithTolerance(Vector3{X: -100 - 1, Y: 0, Z: 0}, trans.LocalToGlobal.transformVector(Vector3{X: 0, Y: 0, Z: 1}), t)
 
 	origin = Vector3{X: 0, Y: -100, Z: 0}
 	trans = LocalCRSFromPoint(origin.X, origin.Y, origin.Z)
 	// assert correctness indirectly
 	// should be centered in the input point
-	compareWithTolerance(origin, trans.LocalToGlobal.Transform(Vector3{}), t)
+	compareWithTolerance(origin, trans.LocalToGlobal.transformVector(Vector3{}), t)
 	// Z axis should be oriented correctly
-	compareWithTolerance(Vector3{X: 0, Y: -100 - 1, Z: 0}, trans.LocalToGlobal.Transform(Vector3{X: 0, Y: 0, Z: 1}), t)
+	compareWithTolerance(Vector3{X: 0, Y: -100 - 1, Z: 0}, trans.LocalToGlobal.transformVector(Vector3{X: 0, Y: 0, Z: 1}), t)
+
+	// test transform
+	// Z axis should be oriented correctly
+	compareWithTolerance(Vector3{X: 0, Y: -100 - 1, Z: 0}, trans.LocalToGlobal.Transform(0, 0, 1), t)
 }
 
 func TestQuaternionColumnMajor(t *testing.T) {

@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/conv/coor"
-	"github.com/mfbonfigli/gocesiumtiler/v2/internal/conv/elev"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/geom"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/las"
+	"github.com/mfbonfigli/gocesiumtiler/v2/mutator"
 )
 
 // Tree represents the interface that an Octree representation of the point cloud should implement.
@@ -20,7 +20,7 @@ type Tree interface {
 	// Load loads the points into the tree. Must be called before any other operation on the tree.
 	// requires providing a coordinate and an elevation converter that will be used by the tree
 	// to internally perform coordinate conversions, as appropriate. The elevation converter can be nil.
-	Load(las.LasReader, coor.ConverterFactory, elev.Converter, context.Context) error
+	Load(las.LasReader, coor.ConverterFactory, mutator.Mutator, context.Context) error
 }
 
 // Node models a generic node of a Tree. A node contains the points to show on its corresponding LoD.
@@ -42,9 +42,9 @@ type Node interface {
 	IsRoot() bool
 	// IsLeaf returns true if the current node does not have any children
 	IsLeaf() bool
-	// ComputeGeometricError returns an estimation, in meters, of the geometric error modeled
+	// GeometricError returns an estimation, in meters, of the geometric error modeled
 	// by the current tree node.
-	ComputeGeometricError() float64
+	GeometricError() float64
 	// TransformMatrix returns the Transform object to use to transform the coordinates from the
 	// node local CRS to the parent CRS. For a root node this can be used to transform the
 	// coordinates back to the EPSG 4978 (ECEF) coordinate system.

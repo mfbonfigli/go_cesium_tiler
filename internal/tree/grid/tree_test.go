@@ -2,6 +2,7 @@ package grid
 
 import (
 	"context"
+	"math"
 	"testing"
 
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/geom"
@@ -121,6 +122,14 @@ func TestGridTreeLoad(t *testing.T) {
 	}
 	if actual := root.TotalNumberOfPoints(); actual != 10 {
 		t.Errorf("expected 10 points, got %d", actual)
+	}
+}
+
+func TestGridTreeGeometricError(t *testing.T) {
+	tree := NewTree(WithGridSize(1))
+	expected := math.Sqrt(3)
+	if actual := tree.GeometricError(); actual != expected {
+		t.Errorf("expected error %v, got %v", expected, actual)
 	}
 }
 

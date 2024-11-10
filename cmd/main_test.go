@@ -8,6 +8,7 @@ import (
 
 	tiler "github.com/mfbonfigli/gocesiumtiler/v2"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/utils"
+	"github.com/mfbonfigli/gocesiumtiler/v2/mutator"
 	"github.com/mfbonfigli/gocesiumtiler/v2/version"
 )
 
@@ -34,6 +35,7 @@ func TestMainProcessFile(t *testing.T) {
 		"-resolution", "11.1",
 		"-z-offset", "-1",
 		"-depth", "13",
+		"-subsample", "0.57",
 		"-min-points-per-tile", "1200",
 		"-8-bit",
 		"myfile.las"}
@@ -62,8 +64,14 @@ func TestMainProcessFile(t *testing.T) {
 	if actual := mockTiler.Depth; actual != 13 {
 		t.Errorf("expected tiler to be called with Depth %v but got %v", 13, actual)
 	}
-	if actual := mockTiler.ElevOffset; actual != -1 {
-		t.Errorf("expected tiler to be called with ElevOffset %v but got %v", -1, actual)
+	if actual := mockTiler.Mutators[0].(*mutator.ZOffset).Offset; actual != -1 {
+		t.Errorf("expected tiler to be called with ZOffset mutator with offset %v but got %v", -1, actual)
+	}
+	if actual := mockTiler.Mutators[1].(*mutator.Subsampler).Percentage; actual != 0.57 {
+		t.Errorf("expected tiler to be called with Subsampler mutator with pct %v but got %v", 0.57, actual)
+	}
+	if actual := len(mockTiler.Mutators); actual != 2 {
+		t.Errorf("expected 2 mutators but got %v", actual)
 	}
 	if actual := mockTiler.Version; actual != version.TilesetVersion_1_0 {
 		t.Errorf("expected tiler to be called with Version %v but got %v", "1.0", actual)
@@ -110,8 +118,11 @@ func TestMainProcessFolder(t *testing.T) {
 	if actual := mockTiler.Depth; actual != 13 {
 		t.Errorf("expected tiler to be called with Depth %v but got %v", 13, actual)
 	}
-	if actual := mockTiler.ElevOffset; actual != -1 {
-		t.Errorf("expected tiler to be called with ElevOffset %v but got %v", -1, actual)
+	if actual := mockTiler.Mutators[0].(*mutator.ZOffset).Offset; actual != -1 {
+		t.Errorf("expected tiler to be called with ZOffset mutator with offset %v but got %v", -1, actual)
+	}
+	if actual := len(mockTiler.Mutators); actual != 1 {
+		t.Errorf("expected 1 mutator but got %v", actual)
 	}
 	if actual := mockTiler.Version; actual != version.TilesetVersion_1_0 {
 		t.Errorf("expected tiler to be called with Version %v but got %v", "1.0", actual)
@@ -180,8 +191,11 @@ func TestMainProcessFolderJoin(t *testing.T) {
 	if actual := mockTiler.Depth; actual != 13 {
 		t.Errorf("expected tiler to be called with Depth %v but got %v", 13, actual)
 	}
-	if actual := mockTiler.ElevOffset; actual != -1 {
-		t.Errorf("expected tiler to be called with ElevOffset %v but got %v", -1, actual)
+	if actual := mockTiler.Mutators[0].(*mutator.ZOffset).Offset; actual != -1 {
+		t.Errorf("expected tiler to be called with ZOffset mutator with offset %v but got %v", -1, actual)
+	}
+	if actual := len(mockTiler.Mutators); actual != 1 {
+		t.Errorf("expected 1 mutator but got %v", actual)
 	}
 	if actual := mockTiler.Version; actual != version.TilesetVersion_1_1 {
 		t.Errorf("expected tiler to be called with Version %v but got %v", "1.1", actual)

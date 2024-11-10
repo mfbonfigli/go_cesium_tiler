@@ -9,12 +9,12 @@ import (
 
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/conv/coor"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/conv/coor/proj"
-	"github.com/mfbonfigli/gocesiumtiler/v2/internal/conv/elev"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/las"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/tree"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/tree/grid"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/utils"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/writer"
+	"github.com/mfbonfigli/gocesiumtiler/v2/mutator"
 )
 
 type Tiler interface {
@@ -99,11 +99,8 @@ func (t *GoCesiumTiler) ProcessFiles(inputLasFiles []string, outputFolder string
 
 	// LOAD POINTS
 	emitEvent(EventPointLoadingStarted, opts, start, inputDesc, "point loading started")
-	elevationConverters := []elev.Converter{
-		elev.NewOffsetElevationConverter(opts.elevationOffset),
-	}
-	eConv := elev.NewPipelineElevationCorrector(elevationConverters...)
-	err = tr.Load(lasFile, t.convFactory, eConv, ctx)
+	mutatorPipeline := mutator.NewPipeline(opts.mutators...)
+	err = tr.Load(lasFile, t.convFactory, mutatorPipeline, ctx)
 	if err != nil {
 		emitEvent(EventPointLoadingError, opts, start, inputDesc, fmt.Sprintf("load error: %v", err))
 		return err

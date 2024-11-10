@@ -13,6 +13,7 @@ import (
 
 	tiler "github.com/mfbonfigli/gocesiumtiler/v2"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/utils"
+	"github.com/mfbonfigli/gocesiumtiler/v2/mutator"
 	"github.com/mfbonfigli/gocesiumtiler/v2/version"
 	"github.com/urfave/cli/v2"
 )
@@ -145,6 +146,12 @@ func getFlags(c *cliOpts) []cli.Flag {
 			Usage:       "set to interpret the input points color as part of a 8bit color space",
 			Destination: &c.eightBit,
 		},
+		&cli.Float64Flag{
+			Name:        "subsample",
+			Value:       c.subsamplePct,
+			Usage:       "Approximate percent of points to keep in the final point cloud, between 0.01 (1%) and 1 (100%)",
+			Destination: &c.subsamplePct,
+		},
 		&cli.StringFlag{
 			Name:        "version",
 			Aliases:     []string{"v"},
@@ -156,27 +163,29 @@ func getFlags(c *cliOpts) []cli.Flag {
 }
 
 type cliOpts struct {
-	output     string
-	crs        string
-	maxDepth   int
-	minPoints  int
-	resolution float64
-	zOffset    float64
-	eightBit   bool
-	join       bool
-	version    string
+	output       string
+	crs          string
+	maxDepth     int
+	minPoints    int
+	resolution   float64
+	zOffset      float64
+	subsamplePct float64
+	eightBit     bool
+	join         bool
+	version      string
 }
 
 func defaultCliOptions() *cliOpts {
 	return &cliOpts{
-		crs:        "",
-		maxDepth:   10,
-		minPoints:  5000,
-		resolution: 20,
-		zOffset:    0,
-		eightBit:   false,
-		join:       false,
-		version:    "1.0",
+		crs:          "",
+		maxDepth:     10,
+		minPoints:    5000,
+		resolution:   20,
+		subsamplePct: 1,
+		zOffset:      0,
+		eightBit:     false,
+		join:         false,
+		version:      "1.0",
 	}
 }
 
@@ -195,6 +204,9 @@ func (c *cliOpts) validate() {
 	}
 	if c.resolution < 0.5 || c.resolution > 1000 {
 		log.Fatal("resolution should be between 1 and 1000 meters")
+	}
+	if c.subsamplePct < 0.01 || c.subsamplePct > 1 {
+		log.Fatal("subsample should be a value between 0.01 and 1")
 	}
 	if _, ok := version.Parse(c.version); !ok {
 		log.Fatal("invalid tileset version, the only allowed values are '1.0' and '1.1'")
@@ -221,9 +233,15 @@ func (c *cliOpts) getTilerOptions() *tiler.TilerOptions {
 	if !ok {
 		log.Fatal("unrecongnized tileset version")
 	}
+	mutators := []mutator.Mutator{
+		mutator.NewZOffset(float32(c.zOffset)),
+	}
+	if c.subsamplePct < 1 {
+		mutators = append(mutators, mutator.NewSubsampler(c.subsamplePct))
+	}
 	return tiler.NewTilerOptions(
 		tiler.WithEightBitColors(c.eightBit),
-		tiler.WithElevationOffset(c.zOffset),
+		tiler.WithMutators(mutators),
 		tiler.WithGridSize(c.resolution),
 		tiler.WithMaxDepth(c.maxDepth),
 		tiler.WithMinPointsPerTile(c.minPoints),

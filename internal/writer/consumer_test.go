@@ -43,7 +43,7 @@ func TestConsume(t *testing.T) {
 	n := &tree.MockNode{
 		TotalNumPts: 3,
 		Pts:         stream,
-		Region: geom.NewBoundingBox(
+		Bounds: geom.NewBoundingBox(
 			0,
 			4,
 			0,
@@ -158,7 +158,7 @@ func TestConsumeGltf(t *testing.T) {
 	n := &tree.MockNode{
 		TotalNumPts: 3,
 		Pts:         stream,
-		Region: geom.NewBoundingBox(
+		Bounds: geom.NewBoundingBox(
 			0,
 			4,
 			0,
@@ -237,5 +237,29 @@ func TestConsumeGltf(t *testing.T) {
 	}
 	if !reflect.DeepEqual(actualGlb, expectedGlb) {
 		t.Errorf("expected glb:\n%v\n\ngot:\n\n%v\n", expectedGlb, actualGlb)
+	}
+}
+
+func TestGenerateTilesetChild(t *testing.T) {
+	c := NewStandardConsumer(WithGeometryEncoder(NewGltfEncoder())).(*StandardConsumer)
+	node := tree.MockNode{
+		Bounds:    geom.NewBoundingBox(0, 10, 0, 10, 0, 10),
+		GeomError: 2.5,
+	}
+	out := c.generateTilesetChild(&node, 2)
+	expectedBox := [12]float64{5, 5, 5, 5, 0, 0, 0, 5, 0, 0, 0, 5}
+	if actual := out.BoundingVolume.Box; actual != expectedBox {
+		t.Errorf("expected box %v, got %v", expectedBox, actual)
+	}
+	expectedContentUrl := "2/tileset.json"
+	if actual := out.Content.Url; actual != expectedContentUrl {
+		t.Errorf("expected url %v, got %v", expectedContentUrl, actual)
+	}
+	expectedGeomError := 2.5
+	if actual := out.GeometricError; actual != expectedGeomError {
+		t.Errorf("expected geom err %v, got %v", expectedGeomError, actual)
+	}
+	if actual := out.Refine; actual != "ADD" {
+		t.Errorf("expected refine mode ADD, got %v", actual)
 	}
 }

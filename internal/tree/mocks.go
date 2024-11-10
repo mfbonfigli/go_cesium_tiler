@@ -4,13 +4,13 @@ import (
 	"context"
 
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/conv/coor"
-	"github.com/mfbonfigli/gocesiumtiler/v2/internal/conv/elev"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/geom"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/las"
+	"github.com/mfbonfigli/gocesiumtiler/v2/mutator"
 )
 
 type MockNode struct {
-	Region                    geom.BoundingBox
+	Bounds                    geom.BoundingBox
 	ChildNodes                [8]Node
 	Pts                       geom.Point32List
 	TotalNumPts               int
@@ -21,7 +21,7 @@ type MockNode struct {
 	// invocation params
 	Las         las.LasReader
 	ConvFactory coor.ConverterFactory
-	Elev        elev.Converter
+	Mut         mutator.Mutator
 	Ctx         context.Context
 	LoadCalled  bool
 	BuildCalled bool
@@ -32,7 +32,7 @@ func (n *MockNode) TransformMatrix() *geom.Transform {
 	return n.Transform
 }
 func (n *MockNode) BoundingBox() geom.BoundingBox {
-	return n.Region
+	return n.Bounds
 }
 func (n *MockNode) Children() [8]Node {
 	return n.ChildNodes
@@ -52,7 +52,7 @@ func (n *MockNode) IsRoot() bool {
 func (n *MockNode) IsLeaf() bool {
 	return n.Leaf
 }
-func (n *MockNode) ComputeGeometricError() float64 {
+func (n *MockNode) GeometricError() float64 {
 	return n.GeomError
 }
 func (n *MockNode) Build() error {
@@ -62,11 +62,11 @@ func (n *MockNode) Build() error {
 func (n *MockNode) RootNode() Node {
 	return n
 }
-func (n *MockNode) Load(l las.LasReader, c coor.ConverterFactory, e elev.Converter, ctx context.Context) error {
+func (n *MockNode) Load(l las.LasReader, c coor.ConverterFactory, m mutator.Mutator, ctx context.Context) error {
 	n.LoadCalled = true
 	n.Ctx = ctx
 	n.Las = l
 	n.ConvFactory = c
-	n.Elev = e
+	n.Mut = m
 	return nil
 }

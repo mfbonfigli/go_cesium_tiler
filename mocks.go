@@ -3,6 +3,7 @@ package tiler
 import (
 	"context"
 
+	"github.com/mfbonfigli/gocesiumtiler/v2/mutator"
 	"github.com/mfbonfigli/gocesiumtiler/v2/version"
 )
 
@@ -11,6 +12,7 @@ type MockTiler struct {
 	InputFolder         string
 	OutputFolder        string
 	SourceCRS           string
+	Mutators            []mutator.Mutator
 	Opts                *TilerOptions
 	Ctx                 context.Context
 	ProcessFilesCalled  bool
@@ -20,7 +22,6 @@ type MockTiler struct {
 	GridSize   float64
 	PtsPerTile int
 	Depth      int
-	ElevOffset float64
 	Version    version.TilesetVersion
 	err        error
 }
@@ -36,8 +37,8 @@ func (m *MockTiler) ProcessFiles(inputLasFiles []string, outputFolder string, so
 	m.GridSize = opts.gridSize
 	m.PtsPerTile = opts.minPointsPerTile
 	m.Depth = opts.maxDepth
-	m.ElevOffset = opts.elevationOffset
 	m.Version = opts.version
+	m.Mutators = opts.mutators
 	return m.err
 }
 
@@ -52,7 +53,7 @@ func (m *MockTiler) ProcessFolder(inputFolder, outputFolder string, sourceCRS st
 	m.GridSize = opts.gridSize
 	m.PtsPerTile = opts.minPointsPerTile
 	m.Depth = opts.maxDepth
-	m.ElevOffset = opts.elevationOffset
 	m.Version = opts.version
+	m.Mutators = opts.mutators
 	return m.err
 }

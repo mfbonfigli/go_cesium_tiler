@@ -76,8 +76,8 @@ func TestTilerProcessFile(t *testing.T) {
 	if actual := tr.ConvFactory; actual == nil {
 		t.Errorf("expected non-nil coordinate converter factory")
 	}
-	if actual := tr.Elev; actual == nil {
-		t.Errorf("expected non-nil elevation converter")
+	if actual := tr.Mut; actual == nil {
+		t.Errorf("expected non-nil mutator")
 	}
 	if actual := tr.Ctx; actual != c {
 		t.Errorf("expected different context")
@@ -141,8 +141,8 @@ func TestTilerProcessFolder(t *testing.T) {
 	if actual := tr.ConvFactory; actual == nil {
 		t.Errorf("expected non-nil coordinate converter factory")
 	}
-	if actual := tr.Elev; actual == nil {
-		t.Errorf("expected non-nil elevation converter")
+	if actual := tr.Mut; actual == nil {
+		t.Errorf("expected non-nil mutator")
 	}
 	if actual := tr.Ctx; actual != c {
 		t.Errorf("expected different context")

@@ -6,10 +6,10 @@ import (
 	"sync"
 
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/conv/coor"
-	"github.com/mfbonfigli/gocesiumtiler/v2/internal/conv/elev"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/geom"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/las"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/tree"
+	"github.com/mfbonfigli/gocesiumtiler/v2/mutator"
 )
 
 // Node implements both the Tree and Node interfaces. The points of the point cloud
@@ -128,8 +128,8 @@ func WithMinPointsPerChildren(num int) func(t *Node) {
 }
 
 // Loads points into the tree from the given las converting them into local coordinates and setting the node transform correctly
-func (t *Node) Load(reader las.LasReader, coorConv coor.ConverterFactory, elevConv elev.Converter, ctx context.Context) error {
-	return t.loadPoints(reader, coorConv, elevConv, ctx)
+func (t *Node) Load(reader las.LasReader, coorConv coor.ConverterFactory, mut mutator.Mutator, ctx context.Context) error {
+	return t.loadPoints(reader, coorConv, mut, ctx)
 }
 
 func (t *Node) RootNode() tree.Node {
@@ -336,7 +336,7 @@ func (t *Node) IsLeaf() bool {
 	return true
 }
 
-func (t *Node) ComputeGeometricError() float64 {
+func (t *Node) GeometricError() float64 {
 	return math.Sqrt(t.gridSize * t.gridSize * 3)
 }
 
@@ -359,10 +359,10 @@ func (t *Node) getChildrenIndex(p geom.Point32) int {
 	return 7
 }
 
-func (t *Node) loadPoints(reader las.LasReader, convFactory coor.ConverterFactory, eConv elev.Converter, ctx context.Context) error {
+func (t *Node) loadPoints(reader las.LasReader, convFactory coor.ConverterFactory, mut mutator.Mutator, ctx context.Context) error {
 	l := loader{
 		createCoorConverter: convFactory,
-		elevationConverter:  eConv,
+		mutator:             mut,
 		workers:             t.loadWorkersNumber,
 	}
 	return l.load(t, reader, ctx)

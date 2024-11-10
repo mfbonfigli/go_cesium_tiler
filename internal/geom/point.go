@@ -19,7 +19,7 @@ type Point64 struct {
 // ToLocal uses the provided transform to return a Point32 with local coordinates
 // obtained from the global coordinates of the Point64
 func (p Point64) ToLocal(t Transform) Point32 {
-	n := t.GlobalToLocal.Transform(p.Vector3)
+	n := t.GlobalToLocal.transformVector(p.Vector3)
 	return NewPoint32(
 		float32(n.X),
 		float32(n.Y),

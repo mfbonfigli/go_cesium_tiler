@@ -170,7 +170,7 @@ func (c *StandardConsumer) generateTilesetRoot(node tree.Node) (Root, error) {
 	return Root{
 		Content:        Content{c.encoder.Filename()},
 		BoundingVolume: BoundingVolume{Box: reg.AsCesiumBox()},
-		GeometricError: node.ComputeGeometricError(),
+		GeometricError: node.GeometricError(),
 		Refine:         "ADD",
 		Children:       children,
 		Transform:      cMajorTransformPtr,
@@ -180,7 +180,7 @@ func (c *StandardConsumer) generateTilesetRoot(node tree.Node) (Root, error) {
 func (c *StandardConsumer) generateTileset(node tree.Node, root Root) Tileset {
 	tileset := Tileset{}
 	tileset.Asset = Asset{Version: c.encoder.TilesetVersion()}
-	tileset.GeometricError = node.ComputeGeometricError()
+	tileset.GeometricError = node.GeometricError()
 	tileset.Root = root
 
 	return tileset
@@ -190,11 +190,7 @@ func (c *StandardConsumer) generateTilesetChildren(node tree.Node) ([]Child, err
 	var children []Child
 	for i, child := range node.Children() {
 		if c.nodeContainsPoints(child) {
-			childJson, err := c.generateTilesetChild(child, i)
-			if err != nil {
-				return nil, err
-			}
-			children = append(children, childJson)
+			children = append(children, c.generateTilesetChild(child, i))
 		}
 	}
 	return children, nil
@@ -204,7 +200,7 @@ func (c *StandardConsumer) nodeContainsPoints(node tree.Node) bool {
 	return node != nil && node.TotalNumberOfPoints() > 0
 }
 
-func (c *StandardConsumer) generateTilesetChild(child tree.Node, childIndex int) (Child, error) {
+func (c *StandardConsumer) generateTilesetChild(child tree.Node, childIndex int) Child {
 	childJson := Child{}
 	filename := "tileset.json"
 	if child.IsLeaf() {
@@ -217,7 +213,7 @@ func (c *StandardConsumer) generateTilesetChild(child tree.Node, childIndex int)
 	childJson.BoundingVolume = BoundingVolume{
 		Box: reg.AsCesiumBox(),
 	}
-	childJson.GeometricError = child.ComputeGeometricError()
+	childJson.GeometricError = child.GeometricError()
 	childJson.Refine = "ADD"
-	return childJson, nil
+	return childJson
 }
