@@ -6,7 +6,8 @@ import (
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/conv/coor"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/geom"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/las"
-	"github.com/mfbonfigli/gocesiumtiler/v2/mutator"
+	"github.com/mfbonfigli/gocesiumtiler/v2/tiler/model"
+	"github.com/mfbonfigli/gocesiumtiler/v2/tiler/mutator"
 )
 
 // Tree represents the interface that an Octree representation of the point cloud should implement.
@@ -33,7 +34,7 @@ type Node interface {
 	Children() [8]Node
 	// Points returns  the points stored in the current node, not including those in the children.
 	// Points will have coordinates expressed relative to the local reference system
-	Points() geom.Point32List
+	Points() geom.PointList
 	// TotalNumberOfPoints returns the number of points contained in this node AND all its children
 	TotalNumberOfPoints() int
 	// NumberOfPoints returns the number of points contained in this node, EXCLUDING its children
@@ -45,8 +46,9 @@ type Node interface {
 	// GeometricError returns an estimation, in meters, of the geometric error modeled
 	// by the current tree node.
 	GeometricError() float64
-	// TransformMatrix returns the Transform object to use to transform the coordinates from the
-	// node local CRS to the parent CRS. For a root node this can be used to transform the
-	// coordinates back to the EPSG 4978 (ECEF) coordinate system.
-	TransformMatrix() *geom.Transform
+	// ToParentCRS returns a Transform object to use to transform the coordinates from the
+	// node local CRS to the parent CRS. For a root node this transforms the
+	// coordinates back to the EPSG 4978 (ECEF) coordinate system. If nil, it is implied
+	// that the transform is the identity transform.
+	ToParentCRS() *model.Transform
 }

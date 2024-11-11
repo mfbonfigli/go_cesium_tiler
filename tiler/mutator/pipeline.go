@@ -1,6 +1,8 @@
 package mutator
 
-import "github.com/mfbonfigli/gocesiumtiler/v2/internal/geom"
+import (
+	"github.com/mfbonfigli/gocesiumtiler/v2/tiler/model"
+)
 
 // Pipeline is a mutator that applies all registered mutators sequentially
 // and returns the result as output
@@ -14,10 +16,10 @@ func NewPipeline(m ...Mutator) *Pipeline {
 	}
 }
 
-func (p *Pipeline) Mutate(pt geom.Point32, t geom.Transform) (geom.Point32, bool) {
+func (p *Pipeline) Mutate(pt model.Point, localToGlobal model.Transform) (model.Point, bool) {
 	for _, m := range p.mutators {
 		keep := true
-		pt, keep = m.Mutate(pt, t)
+		pt, keep = m.Mutate(pt, localToGlobal)
 		if !keep {
 			return pt, false
 		}

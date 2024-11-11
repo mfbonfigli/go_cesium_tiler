@@ -3,13 +3,13 @@ package mutator
 import (
 	"testing"
 
-	"github.com/mfbonfigli/gocesiumtiler/v2/internal/geom"
+	"github.com/mfbonfigli/gocesiumtiler/v2/tiler/model"
 )
 
 func TestSubsample(t *testing.T) {
 	s := NewSubsampler(0.1)
-	pt := geom.Point32{X: 1, Y: 2, Z: 3}
-	out, keep := s.Mutate(pt, geom.Transform{})
+	pt := model.Point{X: 1, Y: 2, Z: 3}
+	out, keep := s.Mutate(pt, model.Transform{})
 	if !keep {
 		// first point should always be kept
 		t.Error("expected first Mutated point to be kept but was not")
@@ -21,7 +21,7 @@ func TestSubsample(t *testing.T) {
 	samples := 100000
 	kept := 0
 	for i := 0; i < samples; i++ {
-		out, keep := s.Mutate(pt, geom.Transform{})
+		out, keep := s.Mutate(pt, model.Transform{})
 		if keep {
 			kept++
 			if out != pt {

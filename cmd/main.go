@@ -11,9 +11,9 @@ import (
 	"sync"
 	"time"
 
-	tiler "github.com/mfbonfigli/gocesiumtiler/v2"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/utils"
-	"github.com/mfbonfigli/gocesiumtiler/v2/mutator"
+	"github.com/mfbonfigli/gocesiumtiler/v2/tiler"
+	"github.com/mfbonfigli/gocesiumtiler/v2/tiler/mutator"
 	"github.com/mfbonfigli/gocesiumtiler/v2/version"
 	"github.com/urfave/cli/v2"
 )

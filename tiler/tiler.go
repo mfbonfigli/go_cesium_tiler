@@ -14,7 +14,7 @@ import (
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/tree/grid"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/utils"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/writer"
-	"github.com/mfbonfigli/gocesiumtiler/v2/mutator"
+	"github.com/mfbonfigli/gocesiumtiler/v2/tiler/mutator"
 )
 
 type Tiler interface {

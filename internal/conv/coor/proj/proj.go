@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/mfbonfigli/gocesiumtiler/v2/internal/geom"
+	"github.com/mfbonfigli/gocesiumtiler/v2/tiler/model"
 	"github.com/twpayne/go-proj/v10"
 )
 
@@ -33,24 +33,24 @@ func NewProjCoordinateConverter() (*projCoordinateConverter, error) {
 }
 
 // Converts the given coordinate from the given source crs to the given target crs.
-func (cc *projCoordinateConverter) Transform(sourceCRS string, targetCRS string, coord geom.Vector3) (geom.Vector3, error) {
+func (cc *projCoordinateConverter) Transform(sourceCRS string, targetCRS string, coord model.Vector) (model.Vector, error) {
 	if sourceCRS == targetCRS {
 		return coord, nil
 	}
 	pj, err := cc.getProjection(sourceCRS, targetCRS)
 	if err != nil {
-		return geom.Vector3{}, err
+		return model.Vector{}, err
 	}
 	c := proj.NewCoord(coord.X, coord.Y, coord.Z, 0)
 	out, err := pj.Forward(c)
 	if err != nil {
 		return coord, fmt.Errorf("error while transforming coordinates: %w", err)
 	}
-	return geom.Vector3{X: out.X(), Y: out.Y(), Z: out.Z()}, nil
+	return model.Vector{X: out.X(), Y: out.Y(), Z: out.Z()}, nil
 }
 
 // Converts the input coordinate from the given CRS to EPSG:4978 srid
-func (cc *projCoordinateConverter) ToWGS84Cartesian(sourceCRS string, coord geom.Vector3) (geom.Vector3, error) {
+func (cc *projCoordinateConverter) ToWGS84Cartesian(sourceCRS string, coord model.Vector) (model.Vector, error) {
 	if sourceCRS == epsg4978crs {
 		return coord, nil
 	}

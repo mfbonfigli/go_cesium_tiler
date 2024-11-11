@@ -16,18 +16,7 @@ streamed, automatically generating the appropriate level of details and includin
 such as color, laser intensity and classification.   
 
 ## What's new: V2
-gocesiumtiler V2 has been released in preview mode and it introduces several important improvements over V1:
-- Greatly reduced memory usage: you can expect a 60%+ reduction of memory consumption.
-- Faster: up to 30% faster compared to V1
-- Experimentally supports 3D Tiles v1.1 (GLTF) in addition to v1.0 (PNTS)
-- Allows reading and merging multiple LAS files in a single 3D Tile output (will load them all up in memory)
-- More intuitive fine tuning of the sampling quality and hard safeguards against deeply nested trees or small tiles
-- Ready to be used as part of other go packages with an easy to use interface
-- Uses Proj v9.5.0: all projections supported by the Proj library are automatically supported by gocesiumtiler.
-- Points are now expressed wrt to a local cartesian reference system with Z-up. This results in tighter tile bounds, and
-  now shaders can fully utilize the local Z coordinate for elevation-based shading, which was not possible before.
-- Many bugfixes
-- Much greater unit test coverage
+gocesiumtiler V2 has been released in preview mode and it introduces several important improvements over V1. Please refer to the changelog for a full list of changes.
 
 This release is backward incompatible compared to V1 and also deprecates several options, most of which were not of much interest.
 Some of these might be added in future minor updates of V2.
@@ -39,23 +28,25 @@ Note that V2.0.0-gamma+ releases are incompatible with V2 beta. This is to be ex
 The major change between the two regards the support for the latest Proj library versions.
 
 ## Features
-gocesiumtiler automatically handles coordinate conversion to the format required by Cesium.
+gocesiumtiler V2 offers the following features:
 
-The tool:
+- Supports LAS 1.4 and writes Intensity and Classification attributes into the final point cloud
 - Performs automatic coordinate conversion without any external library dependency
-- Allows setting a elevation offset for the point clouds (static increment of the Z coordinates, only works for CRS with a Z-up axis)
+- Allows setting a custom elevation offset for the point clouds points
+- Can automatically subsample the input point clouds
 - Can merge multiple LAS files into a single tileset automatically
-- Supports both 3D Tiles Specs 1.0 (.pnts) and (experimentally) 3D Tiles v1.1 (GLTF/GLB assets)
-- Uses all available cores 
-- Samples the point cloud using an uniform sampling scheme
+- Supports both 3D Tiles Specs 1.0 (.pnts) and (experimentally) 3D Tiles v1.1 (glTF/GLB assets)
+- Fast: Uses all available cores and minimizes disk operations
+- High quality sampling via an uniform sampling scheme
 - Can read LAS with colors encoded in 8bit color space rather than 16bit
-- Reads and injects in the output tileset Point Intensity and Classification values
-- Can be used in other GO programs as a library
-- Uses the Proj library and can receive as input any EPSG code, Proj4 or WKT projection definition supported by Proj.
+- Can be used in other golang programs as a library with a simple to use interface
+- Supports the programmatic definition of custom mutators to manipulate points and attributes
+- Uses the Proj library and can receive as input any EPSG code, Proj4 or WKT projection definition supported by Proj 9.5.0+
+  (for some the relevant Proj grid files should be installed)
+- Uses a "ADD" refine method, which minimizes redundant data across tiles
 
-**New from v2.0.0-gamma**: Convertion between EGM and WGS84 elevations is now delegated to Proj. Just make sure to specify the correct 
-input vertical datum and make sure the `share` folder contains the required vertical grids. These are not included but can be downloaded from
-the [Proj CDN](https://cdn.proj.org/)
+
+**New from v2.0.0-gamma**: Convertion between EGM and WGS84 elevations is now delegated to Proj. Just make sure to specify the correct input vertical datum and make sure the `share` folder contains the required vertical grids. These are not included but can be downloaded from the [Proj CDN](https://cdn.proj.org/)
 
 The currently tool uses the version 9.5.0 of the well-known Proj.4 library to handle coordinate conversion. The input CRS
 specified by just providing the relative EPSG code, a Proj4 string or WKT text.
@@ -74,8 +65,15 @@ You can preview a couple of tilesets generated from this tool at this [website](
 ## Changelog
 ##### Version 2.0.0
 * Most of the code has been rewritten from the ground up, achieving much faster tiling with lower memory usage
+* Uses Proj v9.5.0: all projections supported by the Proj library are automatically supported by gocesiumtiler.
+* Experimentally supports 3D Tiles v1.1 (GLTF) in addition to v1.0 (PNTS)
 * Allows merging multiple LAS files into a single 3D tile
 * New options to fine tune the sampling quality: min points per tile, resolution and max tree depth
+* Ready to be used as part of other go packages with an easy to use interface
+* Vends the mutator interface, to programmatically alter points and point attributes as they are read
+* Can automatically subsample input point clouds using a simple random sampling scheme
+* Points are now expressed relative to a local cartesian reference system with Z-up. This results in tighter tile bounds, and
+  now shaders can utilize the local Z coordinate for elevation-based shading, which was not possible before.
 * Much higher unit test coverage
 * The tiler library can be used into external golang projects
 * The CLI has been rewritten from scratch, many options changed name or were added/removed
@@ -203,7 +201,7 @@ go get github.com/mfbonfigli/gocesiumtiler/v2
 
 Then instantiate a tiler object and launch it either via `ProcessFiles` or `ProcessFolder` passing in the desired processing options.
 
-A minimalistic example is:
+A mnimal example is:
 
 ```
 package main
@@ -212,7 +210,7 @@ import (
 	"context"
 	"log"
 
-	tiler "github.com/mfbonfigli/gocesiumtiler/v2"
+	"github.com/mfbonfigli/gocesiumtiler/v2/tiler"
 )
 
 func main() {
@@ -256,23 +254,56 @@ mut := []mutator.Mutator{
 }
 
 err = t.ProcessFiles([]string{"myinput.las"}, "/tmp/myoutput", "EPSG:32632", tiler.NewTilerOptions(
-		tiler.WithEightBitColors(true),
-		tiler.WithWorkerNumber(2),
-		tiler.WithMaxDepth(5),
-      tiler.WithMutators(mut)
-	), ctx)
+   tiler.WithEightBitColors(true),
+   tiler.WithWorkerNumber(2),
+   tiler.WithMaxDepth(5),
+   tiler.WithMutators(mut),
+), ctx)
 ```
 
 To implement a custom mutator, implement the mutator interface:
 
 ```
-Mutate(geom.Point32, geom.Transform) (geom.Point32, bool)
+Mutate(p model.Point, t model.Transform) (model.Point, bool)
 ```
 
-A mutator receives as input the original point and a Transform object that can be used to trasform back and forth from the local point CRS to EPSG 4978. 
-The output is the, eventually manipulated, point and a boolean which should be true if the point should appear in the final point cloud, false otherwise.
+The Mutate function receives as input the original point and a Transform object that can be used to trasform from the local CRS to the global EPSG 4978 CRS and back. 
+The output of the Mutate function is the, eventually manipulated, point and a boolean which should be true if the point should appear in the final point cloud, false otherwise.
 
-Note: mutators must be goroutine safe.
+**Note: mutators must be goroutine safe.**
+
+#### Example of a custom mutator: coloring points by class
+
+```
+type ClassBasedColorMutator struct {}
+
+func (m *ClassBasedColorMutator) Mutate(pt model.Point, localToGlobal model.Transform) (model.Point, bool) {
+	switch pt.Classification {
+	case 2:
+		// ground > brown
+		pt.R, pt.G, pt.B = 128, 0, 0
+	case 3:
+		// low vegetation > dark green
+		pt.R, pt.G, pt.B = 0, 60, 0
+	case 4:
+		// medium vegetation > green
+		pt.R, pt.G, pt.B = 0, 130, 0
+	case 5:
+		// high vegetation > light green
+		pt.R, pt.G, pt.B = 30, 170, 30
+	case 6:
+		// building > orange
+		pt.R, pt.G, pt.B = 200, 100, 0
+	case 9:
+		// water > blue
+		pt.R, pt.G, pt.B = 5, 170, 200
+	default:
+		// all other classes > grey
+		pt.R, pt.G, pt.B = 30, 30, 30
+	}
+	return pt, true
+}
+```
 
 ## Algorithms
 
@@ -329,5 +360,4 @@ The software uses third party code and libraries. Their licenses can be found in
 * Sean Barbeau Java porting of Geotools EarthGravitationalModel code [github](https://github.com/barbeau/earth-gravitational-model)
 
 ### License
-Since version 2.0.0-gamma the library is released under the Mozilla Public License Version 2.0.
-See the [LICENSE.md](LICENSE.md) file for further info.
+Lhe library is released under the Mozilla Public License Version 2.0. See the [LICENSE.md](LICENSE.md) file for further info.

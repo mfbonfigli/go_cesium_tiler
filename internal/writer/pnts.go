@@ -143,7 +143,7 @@ func (e *PntsEncoder) writeTable(tableBytes []byte, wr io.Writer) error {
 	return nil
 }
 
-func (e *PntsEncoder) writePointCoords(pts geom.Point32List, wr io.Writer) error {
+func (e *PntsEncoder) writePointCoords(pts geom.PointList, wr io.Writer) error {
 	n := pts.Len()
 	// write coords
 	for i := 0; i < n; i++ {
@@ -168,7 +168,7 @@ func (e *PntsEncoder) writePointCoords(pts geom.Point32List, wr io.Writer) error
 	return nil
 }
 
-func (e *PntsEncoder) writePointColors(pts geom.Point32List, wr io.Writer) error {
+func (e *PntsEncoder) writePointColors(pts geom.PointList, wr io.Writer) error {
 	n := pts.Len()
 	// write colors
 	for i := 0; i < n; i++ {
@@ -185,7 +185,7 @@ func (e *PntsEncoder) writePointColors(pts geom.Point32List, wr io.Writer) error
 	return nil
 }
 
-func (e *PntsEncoder) writePointIntensities(pts geom.Point32List, wr io.Writer) error {
+func (e *PntsEncoder) writePointIntensities(pts geom.PointList, wr io.Writer) error {
 	n := pts.Len()
 	// write colors
 	for i := 0; i < n; i++ {
@@ -202,7 +202,7 @@ func (e *PntsEncoder) writePointIntensities(pts geom.Point32List, wr io.Writer) 
 	return nil
 }
 
-func (e *PntsEncoder) writePointClassifications(pts geom.Point32List, wr io.Writer) error {
+func (e *PntsEncoder) writePointClassifications(pts geom.PointList, wr io.Writer) error {
 	n := pts.Len()
 	// write colors
 	for i := 0; i < n; i++ {

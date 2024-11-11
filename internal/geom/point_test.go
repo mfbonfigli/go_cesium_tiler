@@ -2,40 +2,15 @@ package geom
 
 import "testing"
 
-func TestToLocal(t *testing.T) {
-	p := &Point64{
-		Vector3:        Vector3{X: 100, Y: 200, Z: 300},
-		R:              1,
-		G:              2,
-		B:              3,
-		Intensity:      4,
-		Classification: 5,
-	}
-	expected := NewPoint32(-100, 300, 600, 1, 2, 3, 4, 5)
-
-	tr := Transform{
-		GlobalToLocal: Quaternion{
-			{0, -1, 0, 100},
-			{1, 0, 0, 200},
-			{0, 0, 1, 300},
-			{0, 0, 0, 1},
-		},
-	}
-	pt := p.ToLocal(tr)
-	if pt != expected {
-		t.Errorf("unexpected point, expected %v got %v", expected, pt)
-	}
-}
-
 func TestLinkedPointStream(t *testing.T) {
 	pt1 := &LinkedPoint{
-		Pt: NewPoint32(1, 2, 3, 4, 5, 6, 7, 8),
+		Pt: NewPoint(1, 2, 3, 4, 5, 6, 7, 8),
 	}
 	pt2 := &LinkedPoint{
-		Pt: NewPoint32(9, 10, 11, 12, 13, 14, 15, 16),
+		Pt: NewPoint(9, 10, 11, 12, 13, 14, 15, 16),
 	}
 	pt3 := &LinkedPoint{
-		Pt: NewPoint32(17, 18, 19, 20, 21, 22, 23, 24),
+		Pt: NewPoint(17, 18, 19, 20, 21, 22, 23, 24),
 	}
 	pt1.Next = pt2
 	pt2.Next = pt3

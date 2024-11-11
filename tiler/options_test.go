@@ -3,7 +3,7 @@ package tiler
 import (
 	"testing"
 
-	"github.com/mfbonfigli/gocesiumtiler/v2/mutator"
+	"github.com/mfbonfigli/gocesiumtiler/v2/tiler/mutator"
 )
 
 func TestOptions(t *testing.T) {

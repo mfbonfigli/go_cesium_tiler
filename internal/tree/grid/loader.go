@@ -9,7 +9,8 @@ import (
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/conv/coor"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/geom"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/las"
-	"github.com/mfbonfigli/gocesiumtiler/v2/mutator"
+	"github.com/mfbonfigli/gocesiumtiler/v2/tiler/model"
+	"github.com/mfbonfigli/gocesiumtiler/v2/tiler/mutator"
 )
 
 // loader is a utility class used to read points from a las reader and initialize
@@ -41,7 +42,7 @@ func (l *loader) load(n *Node, r las.LasReader, ctx context.Context) (err error)
 	}
 
 	// compute the baseline point and local CRS
-	transform, base, read, err := l.baseline(r, c)
+	localToGlobal, base, read, err := l.baseline(r, c)
 	if err != nil {
 		return err
 	}
@@ -68,7 +69,7 @@ func (l *loader) load(n *Node, r las.LasReader, ctx context.Context) (err error)
 		}
 		consumers = append(consumers, newConsumer(i, start, workerPtsNum, conv, l.mutator, r.GetCRS(), &backingArray))
 		wg.Add(1)
-		go consumers[i].consume(r, transform, errchan, &wg, subCtx)
+		go consumers[i].consume(r, localToGlobal, errchan, &wg, subCtx)
 		start = start + workerPtsNum
 	}
 
@@ -114,8 +115,24 @@ func (l *loader) load(n *Node, r las.LasReader, ctx context.Context) (err error)
 	// set data into the gridnode
 	n.bounds = bbox
 	n.pts = &base
-	n.transform = &transform
+	n.localToGlobal = &localToGlobal
 	return nil
+}
+
+// toLocal is a utility function that transforms a Point64 to a locally referenced model.Point using
+// the givn local to global transformation object
+func toLocal(p geom.Point64, localToGlobal model.Transform) model.Point {
+	localCoords := localToGlobal.Inverse(p.Vector)
+	return geom.NewPoint(
+		float32(localCoords.X),
+		float32(localCoords.Y),
+		float32(localCoords.Z),
+		p.R,
+		p.G,
+		p.B,
+		p.Intensity,
+		p.Classification,
+	)
 }
 
 // baseline fetches the first non-discarded point (mutators can discard points) and returns:
@@ -123,29 +140,29 @@ func (l *loader) load(n *Node, r las.LasReader, ctx context.Context) (err error)
 // - the point, in local coordinates
 // - the number of points read from the point cloud
 // - An error in case the operation failed
-func (l *loader) baseline(r las.LasReader, c coor.Converter) (geom.Transform, geom.LinkedPoint, int, error) {
+func (l *loader) baseline(r las.LasReader, c coor.Converter) (model.Transform, geom.LinkedPoint, int, error) {
 	read := 0
 	for {
 		first, err := r.GetNext()
 		if err != nil {
-			return geom.Transform{}, geom.LinkedPoint{}, 0, err
+			return model.Transform{}, geom.LinkedPoint{}, 0, err
 		}
 		read++
 		pt, err := transformPoint(first, c, r.GetCRS())
 		if err != nil {
-			return geom.Transform{}, geom.LinkedPoint{}, 0, err
+			return model.Transform{}, geom.LinkedPoint{}, 0, err
 		}
 
-		transform := geom.LocalCRSFromPoint(pt.X, pt.Y, pt.Z)
-		baselinePtLocalCoords := pt.ToLocal(transform)
+		localToGlobal := geom.LocalToGlobalTransformFromPoint(pt.X, pt.Y, pt.Z)
+		baselinePtLocalCoords := toLocal(pt, localToGlobal)
 		keep := true
 		if l.mutator != nil {
-			baselinePtLocalCoords, keep = l.mutator.Mutate(baselinePtLocalCoords, transform)
+			baselinePtLocalCoords, keep = l.mutator.Mutate(baselinePtLocalCoords, localToGlobal)
 			if !keep {
 				continue
 			}
 		}
-		return transform, geom.LinkedPoint{Pt: baselinePtLocalCoords}, read, nil
+		return localToGlobal, geom.LinkedPoint{Pt: baselinePtLocalCoords}, read, nil
 	}
 }
 
@@ -177,7 +194,7 @@ func newConsumer(id int, start int, count int, conv coor.Converter, mut mutator.
 	}
 }
 
-func (c *consumer) consume(r las.LasReader, transform geom.Transform, errchan chan error, wg *sync.WaitGroup, ctx context.Context) {
+func (c *consumer) consume(r las.LasReader, localToGlobal model.Transform, errchan chan error, wg *sync.WaitGroup, ctx context.Context) {
 	defer func() {
 		if r := recover(); r != nil {
 			errchan <- fmt.Errorf("panic while reading from las: %v", r)
@@ -205,12 +222,12 @@ func (c *consumer) consume(r las.LasReader, transform geom.Transform, errchan ch
 		}
 
 		// transform local and update bounds
-		localPt := pt.ToLocal(transform)
+		localPt := toLocal(pt, localToGlobal)
 		keep := true
 
 		// mutate the point
 		if c.mutator != nil {
-			localPt, keep = c.mutator.Mutate(localPt, transform)
+			localPt, keep = c.mutator.Mutate(localPt, localToGlobal)
 			if !keep {
 				// point should be discarded, move on
 				i++
@@ -238,7 +255,7 @@ func (c *consumer) consume(r las.LasReader, transform geom.Transform, errchan ch
 func transformPoint(pt geom.Point64, conv coor.Converter, sourceCRS string) (geom.Point64, error) {
 	var err error
 
-	out, err := conv.ToWGS84Cartesian(sourceCRS, geom.Vector3{X: pt.X, Y: pt.Y, Z: pt.Z})
+	out, err := conv.ToWGS84Cartesian(sourceCRS, model.Vector{X: pt.X, Y: pt.Y, Z: pt.Z})
 	if err != nil {
 		return pt, err
 	}

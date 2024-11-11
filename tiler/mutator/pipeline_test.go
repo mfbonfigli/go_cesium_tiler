@@ -4,11 +4,12 @@ import (
 	"testing"
 
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/geom"
+	"github.com/mfbonfigli/gocesiumtiler/v2/tiler/model"
 )
 
 type discardMutator struct{}
 
-func (p *discardMutator) Mutate(pt geom.Point32, t geom.Transform) (geom.Point32, bool) {
+func (p *discardMutator) Mutate(pt model.Point, t model.Transform) (model.Point, bool) {
 	return pt, false
 }
 
@@ -17,8 +18,8 @@ func TestPipeline(t *testing.T) {
 		NewZOffset(1.5),
 		NewZOffset(2.5),
 	)
-	actual, keep := p.Mutate(geom.NewPoint32(1, 2, 3, 1, 2, 3, 4, 5), geom.Transform{})
-	expected := geom.NewPoint32(1, 2, 7, 1, 2, 3, 4, 5)
+	actual, keep := p.Mutate(geom.NewPoint(1, 2, 3, 1, 2, 3, 4, 5), model.Transform{})
+	expected := geom.NewPoint(1, 2, 7, 1, 2, 3, 4, 5)
 	if actual != expected {
 		t.Errorf("expected %v, got %v", expected, actual)
 	}
@@ -33,8 +34,8 @@ func TestPipelineDiscard(t *testing.T) {
 		&discardMutator{},
 		NewZOffset(2.5),
 	)
-	actual, keep := p.Mutate(geom.NewPoint32(1, 2, 3, 1, 2, 3, 4, 5), geom.Transform{})
-	expected := geom.NewPoint32(1, 2, 4.5, 1, 2, 3, 4, 5)
+	actual, keep := p.Mutate(geom.NewPoint(1, 2, 3, 1, 2, 3, 4, 5), model.Transform{})
+	expected := geom.NewPoint(1, 2, 4.5, 1, 2, 3, 4, 5)
 	if actual != expected {
 		t.Errorf("expected %v, got %v", expected, actual)
 	}

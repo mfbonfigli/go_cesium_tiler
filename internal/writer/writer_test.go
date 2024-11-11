@@ -12,13 +12,13 @@ import (
 
 func TestWriter(t *testing.T) {
 	pt1 := &geom.LinkedPoint{
-		Pt: geom.NewPoint32(1, 2, 3, 4, 5, 6, 7, 8),
+		Pt: geom.NewPoint(1, 2, 3, 4, 5, 6, 7, 8),
 	}
 	pt2 := &geom.LinkedPoint{
-		Pt: geom.NewPoint32(9, 10, 11, 12, 13, 14, 15, 16),
+		Pt: geom.NewPoint(9, 10, 11, 12, 13, 14, 15, 16),
 	}
 	pt3 := &geom.LinkedPoint{
-		Pt: geom.NewPoint32(17, 18, 19, 20, 21, 22, 23, 24),
+		Pt: geom.NewPoint(17, 18, 19, 20, 21, 22, 23, 24),
 	}
 	pt1.Next = pt2
 	pt2.Next = pt3
@@ -76,13 +76,13 @@ func TestWriter(t *testing.T) {
 
 func TestWriterWithProducerError(t *testing.T) {
 	pt1 := &geom.LinkedPoint{
-		Pt: geom.NewPoint32(1, 2, 3, 4, 5, 6, 7, 8),
+		Pt: geom.NewPoint(1, 2, 3, 4, 5, 6, 7, 8),
 	}
 	pt2 := &geom.LinkedPoint{
-		Pt: geom.NewPoint32(9, 10, 11, 12, 13, 14, 15, 16),
+		Pt: geom.NewPoint(9, 10, 11, 12, 13, 14, 15, 16),
 	}
 	pt3 := &geom.LinkedPoint{
-		Pt: geom.NewPoint32(17, 18, 19, 20, 21, 22, 23, 24),
+		Pt: geom.NewPoint(17, 18, 19, 20, 21, 22, 23, 24),
 	}
 	pt1.Next = pt2
 	pt2.Next = pt3
@@ -142,13 +142,13 @@ func TestWriterWithProducerError(t *testing.T) {
 
 func TestWriterWithConsumerError(t *testing.T) {
 	pt1 := &geom.LinkedPoint{
-		Pt: geom.NewPoint32(1, 2, 3, 4, 5, 6, 7, 8),
+		Pt: geom.NewPoint(1, 2, 3, 4, 5, 6, 7, 8),
 	}
 	pt2 := &geom.LinkedPoint{
-		Pt: geom.NewPoint32(9, 10, 11, 12, 13, 14, 15, 16),
+		Pt: geom.NewPoint(9, 10, 11, 12, 13, 14, 15, 16),
 	}
 	pt3 := &geom.LinkedPoint{
-		Pt: geom.NewPoint32(17, 18, 19, 20, 21, 22, 23, 24),
+		Pt: geom.NewPoint(17, 18, 19, 20, 21, 22, 23, 24),
 	}
 	pt1.Next = pt2
 	pt2.Next = pt3

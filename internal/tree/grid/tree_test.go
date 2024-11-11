@@ -9,6 +9,7 @@ import (
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/las"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/utils"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/utils/test"
+	"github.com/mfbonfigli/gocesiumtiler/v2/tiler/model"
 )
 
 func TestNewGridTree(t *testing.T) {
@@ -69,35 +70,44 @@ func TestGridTreeLoad(t *testing.T) {
 	reader := &las.MockLasReader{
 		CRS: "EPSG:32633",
 		Pts: []geom.Point64{
-			{Vector3: geom.Vector3{X: 432488.4714159001, Y: 4.705678720925195e+06, Z: 2.550538045727727}, R: 160, G: 166, B: 203, Intensity: 7, Classification: 3},
-			{Vector3: geom.Vector3{X: 432466.58372129063, Y: 4.705686414284739e+06, Z: 4.457767479175496}, R: 186, G: 200, B: 237, Intensity: 7, Classification: 3},
-			{Vector3: geom.Vector3{X: 432469.98167019564, Y: 4.705681849831438e+06, Z: 4.655027394763156}, R: 156, G: 167, B: 204, Intensity: 7, Classification: 3},
-			{Vector3: geom.Vector3{X: 432456.1696575739, Y: 4.705683863015449e+06, Z: 1.7922372985151949}, R: 107, G: 114, B: 156, Intensity: 7, Classification: 3},
-			{Vector3: geom.Vector3{X: 432465.34641605255, Y: 4.705682466042181e+06, Z: 1.9543476118949155}, R: 165, G: 176, B: 206, Intensity: 7, Classification: 3},
-			{Vector3: geom.Vector3{X: 432471.7795208326, Y: 4.705664509499522e+06, Z: 1.9162578617315837}, R: 90, G: 136, B: 213, Intensity: 7, Classification: 3},
-			{Vector3: geom.Vector3{X: 432449.48655283387, Y: 4.705672817604579e+06, Z: 2.7424278273838762}, R: 51, G: 66, B: 87, Intensity: 7, Classification: 3},
-			{Vector3: geom.Vector3{X: 432457.86106384156, Y: 4.705682649635591e+06, Z: 2.081788046497537}, R: 80, G: 97, B: 123, Intensity: 7, Classification: 3},
-			{Vector3: geom.Vector3{X: 432466.3000286405, Y: 4.705680013894157e+06, Z: 1.9357872046388636}, R: 160, G: 169, B: 202, Intensity: 7, Classification: 3},
-			{Vector3: geom.Vector3{X: 432455.7336230836, Y: 4.705657784890012e+06, Z: 6.120847715554042}, R: 73, G: 78, B: 110, Intensity: 7, Classification: 3},
+			{Vector: model.Vector{X: 432488.4714159001, Y: 4.705678720925195e+06, Z: 2.550538045727727}, R: 160, G: 166, B: 203, Intensity: 7, Classification: 3},
+			{Vector: model.Vector{X: 432466.58372129063, Y: 4.705686414284739e+06, Z: 4.457767479175496}, R: 186, G: 200, B: 237, Intensity: 7, Classification: 3},
+			{Vector: model.Vector{X: 432469.98167019564, Y: 4.705681849831438e+06, Z: 4.655027394763156}, R: 156, G: 167, B: 204, Intensity: 7, Classification: 3},
+			{Vector: model.Vector{X: 432456.1696575739, Y: 4.705683863015449e+06, Z: 1.7922372985151949}, R: 107, G: 114, B: 156, Intensity: 7, Classification: 3},
+			{Vector: model.Vector{X: 432465.34641605255, Y: 4.705682466042181e+06, Z: 1.9543476118949155}, R: 165, G: 176, B: 206, Intensity: 7, Classification: 3},
+			{Vector: model.Vector{X: 432471.7795208326, Y: 4.705664509499522e+06, Z: 1.9162578617315837}, R: 90, G: 136, B: 213, Intensity: 7, Classification: 3},
+			{Vector: model.Vector{X: 432449.48655283387, Y: 4.705672817604579e+06, Z: 2.7424278273838762}, R: 51, G: 66, B: 87, Intensity: 7, Classification: 3},
+			{Vector: model.Vector{X: 432457.86106384156, Y: 4.705682649635591e+06, Z: 2.081788046497537}, R: 80, G: 97, B: 123, Intensity: 7, Classification: 3},
+			{Vector: model.Vector{X: 432466.3000286405, Y: 4.705680013894157e+06, Z: 1.9357872046388636}, R: 160, G: 169, B: 202, Intensity: 7, Classification: 3},
+			{Vector: model.Vector{X: 432455.7336230836, Y: 4.705657784890012e+06, Z: 6.120847715554042}, R: 73, G: 78, B: 110, Intensity: 7, Classification: 3},
 		},
 	}
 
 	expectedAbsolute := []geom.Point64{
-		{Vector3: geom.Vector3{X: 0, Y: 0, Z: 0}, R: 160, G: 166, B: 203, Intensity: 7, Classification: 3},
-		{Vector3: geom.Vector3{X: -3.6806421, Y: -22.91469, Z: 1.9071872}, R: 186, G: 200, B: 237, Intensity: 7, Classification: 3},
-		{Vector3: geom.Vector3{X: 0.20831008, Y: -18.757929, Z: 2.104462}, R: 156, G: 167, B: 204, Intensity: 7, Classification: 3},
-		{Vector3: geom.Vector3{X: 0.6830035, Y: -32.712612, Z: -0.7583845}, R: 107, G: 114, B: 156, Intensity: 7, Classification: 3},
-		{Vector3: geom.Vector3{X: 0.42609432, Y: -23.430492, Z: -0.5962334}, R: 165, G: 176, B: 206, Intensity: 7, Classification: 3},
-		{Vector3: geom.Vector3{X: 16.958508, Y: -13.9041, Z: -0.6343179}, R: 90, G: 136, B: 213, Intensity: 7, Classification: 3},
-		{Vector3: geom.Vector3{X: 12.744787, Y: -37.327072, Z: 0.19176799}, R: 51, G: 66, B: 87, Intensity: 7, Classification: 3},
-		{Vector3: geom.Vector3{X: 1.5766444, Y: -30.83178, Z: -0.4688246}, R: 80, G: 97, B: 123, Intensity: 7, Classification: 3},
-		{Vector3: geom.Vector3{X: 2.6704051, Y: -22.055632, Z: -0.6147895}, R: 160, G: 169, B: 202, Intensity: 7, Classification: 3},
-		{Vector3: geom.Vector3{X: 26.432066, Y: -28.503836, Z: 3.5701911}, R: 73, G: 78, B: 110, Intensity: 7, Classification: 3},
+		{Vector: model.Vector{X: 0, Y: 0, Z: 0}, R: 160, G: 166, B: 203, Intensity: 7, Classification: 3},
+		{Vector: model.Vector{X: -3.6806421, Y: -22.91469, Z: 1.9071872}, R: 186, G: 200, B: 237, Intensity: 7, Classification: 3},
+		{Vector: model.Vector{X: 0.20831008, Y: -18.757929, Z: 2.104462}, R: 156, G: 167, B: 204, Intensity: 7, Classification: 3},
+		{Vector: model.Vector{X: 0.6830035, Y: -32.712612, Z: -0.7583845}, R: 107, G: 114, B: 156, Intensity: 7, Classification: 3},
+		{Vector: model.Vector{X: 0.42609432, Y: -23.430492, Z: -0.5962334}, R: 165, G: 176, B: 206, Intensity: 7, Classification: 3},
+		{Vector: model.Vector{X: 16.958508, Y: -13.9041, Z: -0.6343179}, R: 90, G: 136, B: 213, Intensity: 7, Classification: 3},
+		{Vector: model.Vector{X: 12.744787, Y: -37.327072, Z: 0.19176799}, R: 51, G: 66, B: 87, Intensity: 7, Classification: 3},
+		{Vector: model.Vector{X: 1.5766444, Y: -30.83178, Z: -0.4688246}, R: 80, G: 97, B: 123, Intensity: 7, Classification: 3},
+		{Vector: model.Vector{X: 2.6704051, Y: -22.055632, Z: -0.6147895}, R: 160, G: 169, B: 202, Intensity: 7, Classification: 3},
+		{Vector: model.Vector{X: 26.432066, Y: -28.503836, Z: 3.5701911}, R: 73, G: 78, B: 110, Intensity: 7, Classification: 3},
 	}
 
-	expected := make([]geom.Point32, len(expectedAbsolute))
-	for i := range expectedAbsolute {
-		expected[i] = expectedAbsolute[i].ToLocal(geom.IdentityTransform)
+	expected := make([]model.Point, len(expectedAbsolute))
+	for i, e := range expectedAbsolute {
+		expected[i] = model.Point{
+			X:              float32(e.X),
+			Y:              float32(e.Y),
+			Z:              float32(e.Z),
+			R:              e.R,
+			G:              e.G,
+			B:              e.B,
+			Intensity:      e.Intensity,
+			Classification: e.Classification,
+		}
 	}
 	conv := test.GetTestCoordinateConverterFactory()
 	tree.Load(reader, conv, nil, context.TODO())
@@ -139,35 +149,43 @@ func TestGridTreeBuild(t *testing.T) {
 	reader := &las.MockLasReader{
 		CRS: "EPSG:4978",
 		Pts: []geom.Point64{
-			{Vector3: geom.Vector3{X: 0, Y: 0, Z: 0}, R: 160, G: 166, B: 203, Intensity: 7, Classification: 3},
-			{Vector3: geom.Vector3{X: -1, Y: -1, Z: -1}, R: 186, G: 200, B: 237, Intensity: 7, Classification: 3},
-			{Vector3: geom.Vector3{X: 1, Y: 1, Z: 1}, R: 156, G: 167, B: 204, Intensity: 7, Classification: 3},
-			{Vector3: geom.Vector3{X: -1, Y: -1, Z: 1}, R: 107, G: 114, B: 156, Intensity: 7, Classification: 3},
-			{Vector3: geom.Vector3{X: 1, Y: 1, Z: -1}, R: 165, G: 176, B: 206, Intensity: 7, Classification: 3},
-			{Vector3: geom.Vector3{X: -1, Y: 1, Z: 1}, R: 90, G: 136, B: 213, Intensity: 7, Classification: 3},
-			{Vector3: geom.Vector3{X: -1, Y: 1, Z: -1}, R: 51, G: 66, B: 87, Intensity: 7, Classification: 3},
-			{Vector3: geom.Vector3{X: 1, Y: -1, Z: 1}, R: 80, G: 97, B: 123, Intensity: 7, Classification: 3},
-			{Vector3: geom.Vector3{X: 1, Y: -1, Z: -1}, R: 160, G: 169, B: 202, Intensity: 7, Classification: 3},
-			{Vector3: geom.Vector3{X: 0.5, Y: 0.5, Z: 0.5}, R: 73, G: 78, B: 110, Intensity: 7, Classification: 3},
+			{Vector: model.Vector{X: 0, Y: 0, Z: 0}, R: 160, G: 166, B: 203, Intensity: 7, Classification: 3},
+			{Vector: model.Vector{X: -1, Y: -1, Z: -1}, R: 186, G: 200, B: 237, Intensity: 7, Classification: 3},
+			{Vector: model.Vector{X: 1, Y: 1, Z: 1}, R: 156, G: 167, B: 204, Intensity: 7, Classification: 3},
+			{Vector: model.Vector{X: -1, Y: -1, Z: 1}, R: 107, G: 114, B: 156, Intensity: 7, Classification: 3},
+			{Vector: model.Vector{X: 1, Y: 1, Z: -1}, R: 165, G: 176, B: 206, Intensity: 7, Classification: 3},
+			{Vector: model.Vector{X: -1, Y: 1, Z: 1}, R: 90, G: 136, B: 213, Intensity: 7, Classification: 3},
+			{Vector: model.Vector{X: -1, Y: 1, Z: -1}, R: 51, G: 66, B: 87, Intensity: 7, Classification: 3},
+			{Vector: model.Vector{X: 1, Y: -1, Z: 1}, R: 80, G: 97, B: 123, Intensity: 7, Classification: 3},
+			{Vector: model.Vector{X: 1, Y: -1, Z: -1}, R: 160, G: 169, B: 202, Intensity: 7, Classification: 3},
+			{Vector: model.Vector{X: 0.5, Y: 0.5, Z: 0.5}, R: 73, G: 78, B: 110, Intensity: 7, Classification: 3},
 		},
 	}
 
 	expectedAbsolute := []geom.Point64{
-		{Vector3: geom.Vector3{X: 0, Y: 0, Z: 0}, R: 160, G: 166, B: 203, Intensity: 7, Classification: 3}, // baseline
-		{Vector3: geom.Vector3{X: -1, Y: -1, Z: -1}, R: 186, G: 200, B: 237, Intensity: 7, Classification: 3},
-		{Vector3: geom.Vector3{X: 1, Y: 1, Z: 1}, R: 156, G: 167, B: 204, Intensity: 7, Classification: 3},
-		{Vector3: geom.Vector3{X: -1, Y: -1, Z: 1}, R: 107, G: 114, B: 156, Intensity: 7, Classification: 3},
-		{Vector3: geom.Vector3{X: 1, Y: 1, Z: -1}, R: 165, G: 176, B: 206, Intensity: 7, Classification: 3},
-		{Vector3: geom.Vector3{X: -1, Y: 1, Z: 1}, R: 90, G: 136, B: 213, Intensity: 7, Classification: 3},
-		{Vector3: geom.Vector3{X: -1, Y: 1, Z: -1}, R: 51, G: 66, B: 87, Intensity: 7, Classification: 3},
-		{Vector3: geom.Vector3{X: 1, Y: -1, Z: 1}, R: 80, G: 97, B: 123, Intensity: 7, Classification: 3},
-		{Vector3: geom.Vector3{X: 1, Y: -1, Z: -1}, R: 160, G: 169, B: 202, Intensity: 7, Classification: 3},
-		{Vector3: geom.Vector3{X: 0.5, Y: 0.5, Z: 0.5}, R: 73, G: 78, B: 110, Intensity: 7, Classification: 3},
+		{Vector: model.Vector{X: 0, Y: 0, Z: 0}, R: 160, G: 166, B: 203, Intensity: 7, Classification: 3}, // baseline
+		{Vector: model.Vector{X: -1, Y: -1, Z: -1}, R: 186, G: 200, B: 237, Intensity: 7, Classification: 3},
+		{Vector: model.Vector{X: 1, Y: 1, Z: 1}, R: 156, G: 167, B: 204, Intensity: 7, Classification: 3},
+		{Vector: model.Vector{X: -1, Y: -1, Z: 1}, R: 107, G: 114, B: 156, Intensity: 7, Classification: 3},
+		{Vector: model.Vector{X: 1, Y: 1, Z: -1}, R: 165, G: 176, B: 206, Intensity: 7, Classification: 3},
+		{Vector: model.Vector{X: -1, Y: 1, Z: 1}, R: 90, G: 136, B: 213, Intensity: 7, Classification: 3},
+		{Vector: model.Vector{X: -1, Y: 1, Z: -1}, R: 51, G: 66, B: 87, Intensity: 7, Classification: 3},
+		{Vector: model.Vector{X: 1, Y: -1, Z: 1}, R: 80, G: 97, B: 123, Intensity: 7, Classification: 3},
+		{Vector: model.Vector{X: 1, Y: -1, Z: -1}, R: 160, G: 169, B: 202, Intensity: 7, Classification: 3},
+		{Vector: model.Vector{X: 0.5, Y: 0.5, Z: 0.5}, R: 73, G: 78, B: 110, Intensity: 7, Classification: 3},
 	}
-	expected := make([]geom.Point32, len(expectedAbsolute))
-
-	for i := range expectedAbsolute {
-		expected[i] = expectedAbsolute[i].ToLocal(geom.IdentityTransform)
+	expected := make([]model.Point, len(expectedAbsolute))
+	for i, e := range expectedAbsolute {
+		expected[i] = model.Point{
+			X:              float32(e.X),
+			Y:              float32(e.Y),
+			Z:              float32(e.Z),
+			R:              e.R,
+			G:              e.G,
+			B:              e.B,
+			Intensity:      e.Intensity,
+			Classification: e.Classification,
+		}
 	}
 	conv := test.GetTestCoordinateConverterFactory()
 
@@ -202,7 +220,7 @@ func TestGridTreeBuild(t *testing.T) {
 		t.Errorf("unexpected point returned, expected %v, got %v", expected[0], pt)
 	}
 
-	childExpectedMap := []geom.Point32{
+	childExpectedMap := []model.Point{
 		expected[1],
 		expected[8],
 		expected[6],
@@ -278,16 +296,16 @@ func TestGetBoundingBoxRegion(t *testing.T) {
 	reader := &las.MockLasReader{
 		CRS: "EPSG:32633",
 		Pts: []geom.Point64{
-			{Vector3: geom.Vector3{X: 432488.4714159001, Y: 4.705678720925195e+06, Z: 2.550538045727727}, R: 160, G: 166, B: 203, Intensity: 7, Classification: 3},
-			{Vector3: geom.Vector3{X: 432466.58372129063, Y: 4.705686414284739e+06, Z: 4.457767479175496}, R: 186, G: 200, B: 237, Intensity: 7, Classification: 3},
-			{Vector3: geom.Vector3{X: 432469.98167019564, Y: 4.705681849831438e+06, Z: 4.655027394763156}, R: 156, G: 167, B: 204, Intensity: 7, Classification: 3},
-			{Vector3: geom.Vector3{X: 432456.1696575739, Y: 4.705683863015449e+06, Z: 1.7922372985151949}, R: 107, G: 114, B: 156, Intensity: 7, Classification: 3},
-			{Vector3: geom.Vector3{X: 432465.34641605255, Y: 4.705682466042181e+06, Z: 1.9543476118949155}, R: 165, G: 176, B: 206, Intensity: 7, Classification: 3},
-			{Vector3: geom.Vector3{X: 432471.7795208326, Y: 4.705664509499522e+06, Z: 1.9162578617315837}, R: 90, G: 136, B: 213, Intensity: 7, Classification: 3},
-			{Vector3: geom.Vector3{X: 432449.48655283387, Y: 4.705672817604579e+06, Z: 2.7424278273838762}, R: 51, G: 66, B: 87, Intensity: 7, Classification: 3},
-			{Vector3: geom.Vector3{X: 432457.86106384156, Y: 4.705682649635591e+06, Z: 2.081788046497537}, R: 80, G: 97, B: 123, Intensity: 7, Classification: 3},
-			{Vector3: geom.Vector3{X: 432466.3000286405, Y: 4.705680013894157e+06, Z: 1.9357872046388636}, R: 160, G: 169, B: 202, Intensity: 7, Classification: 3},
-			{Vector3: geom.Vector3{X: 432455.7336230836, Y: 4.705657784890012e+06, Z: 6.120847715554042}, R: 73, G: 78, B: 110, Intensity: 7, Classification: 3},
+			{Vector: model.Vector{X: 432488.4714159001, Y: 4.705678720925195e+06, Z: 2.550538045727727}, R: 160, G: 166, B: 203, Intensity: 7, Classification: 3},
+			{Vector: model.Vector{X: 432466.58372129063, Y: 4.705686414284739e+06, Z: 4.457767479175496}, R: 186, G: 200, B: 237, Intensity: 7, Classification: 3},
+			{Vector: model.Vector{X: 432469.98167019564, Y: 4.705681849831438e+06, Z: 4.655027394763156}, R: 156, G: 167, B: 204, Intensity: 7, Classification: 3},
+			{Vector: model.Vector{X: 432456.1696575739, Y: 4.705683863015449e+06, Z: 1.7922372985151949}, R: 107, G: 114, B: 156, Intensity: 7, Classification: 3},
+			{Vector: model.Vector{X: 432465.34641605255, Y: 4.705682466042181e+06, Z: 1.9543476118949155}, R: 165, G: 176, B: 206, Intensity: 7, Classification: 3},
+			{Vector: model.Vector{X: 432471.7795208326, Y: 4.705664509499522e+06, Z: 1.9162578617315837}, R: 90, G: 136, B: 213, Intensity: 7, Classification: 3},
+			{Vector: model.Vector{X: 432449.48655283387, Y: 4.705672817604579e+06, Z: 2.7424278273838762}, R: 51, G: 66, B: 87, Intensity: 7, Classification: 3},
+			{Vector: model.Vector{X: 432457.86106384156, Y: 4.705682649635591e+06, Z: 2.081788046497537}, R: 80, G: 97, B: 123, Intensity: 7, Classification: 3},
+			{Vector: model.Vector{X: 432466.3000286405, Y: 4.705680013894157e+06, Z: 1.9357872046388636}, R: 160, G: 169, B: 202, Intensity: 7, Classification: 3},
+			{Vector: model.Vector{X: 432455.7336230836, Y: 4.705657784890012e+06, Z: 6.120847715554042}, R: 73, G: 78, B: 110, Intensity: 7, Classification: 3},
 		},
 	}
 

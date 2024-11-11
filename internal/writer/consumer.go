@@ -9,9 +9,9 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/mfbonfigli/gocesiumtiler/v2/internal/geom"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/tree"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/utils"
+	"github.com/mfbonfigli/gocesiumtiler/v2/tiler/model"
 	"github.com/mfbonfigli/gocesiumtiler/v2/version"
 )
 
@@ -162,8 +162,8 @@ func (c *StandardConsumer) generateTilesetRoot(node tree.Node) (Root, error) {
 	}
 
 	var cMajorTransformPtr *[16]float64
-	if trans := node.TransformMatrix(); trans != nil && trans.LocalToGlobal != geom.IdentityQuaternion {
-		cMajor := trans.LocalToGlobal.ColumnMajor()
+	if trans := node.ToParentCRS(); trans != nil && *trans != model.IdentityTransform {
+		cMajor := trans.ForwardColumnMajor()
 		cMajorTransformPtr = &cMajor
 	}
 

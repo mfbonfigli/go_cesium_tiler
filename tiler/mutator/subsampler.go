@@ -4,7 +4,7 @@ import (
 	"math/rand"
 	"sync/atomic"
 
-	"github.com/mfbonfigli/gocesiumtiler/v2/internal/geom"
+	"github.com/mfbonfigli/gocesiumtiler/v2/tiler/model"
 )
 
 type Subsampler struct {
@@ -21,7 +21,7 @@ func NewSubsampler(percentage float64) *Subsampler {
 	}
 }
 
-func (s *Subsampler) Mutate(pt geom.Point32, t geom.Transform) (geom.Point32, bool) {
+func (s *Subsampler) Mutate(pt model.Point, localToGlobal model.Transform) (model.Point, bool) {
 	if s.first.Load() {
 		// always take the first point to ensure the point cloud has at least one point
 		s.first.Swap(false)

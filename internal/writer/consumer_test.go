@@ -10,6 +10,7 @@ import (
 
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/geom"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/tree"
+	"github.com/mfbonfigli/gocesiumtiler/v2/tiler/model"
 )
 
 func TestConsume(t *testing.T) {
@@ -20,7 +21,7 @@ func TestConsume(t *testing.T) {
 	wg.Add(1)
 	go c.Consume(wc, ec, wg)
 
-	pts := []geom.Point32{
+	pts := []model.Point{
 		{X: 0, Y: 0, Z: 0, R: 160, G: 166, B: 203, Intensity: 7, Classification: 3},
 		{X: 1, Y: 3, Z: 4, R: 186, G: 200, B: 237, Intensity: 7, Classification: 3},
 		{X: 2, Y: 6, Z: 8, R: 156, G: 167, B: 204, Intensity: 7, Classification: 3},
@@ -39,7 +40,7 @@ func TestConsume(t *testing.T) {
 	pt2.Next = pt3
 
 	stream := geom.NewLinkedPointStream(pt1, 3)
-	tr := geom.LocalCRSFromPoint(1000, 1000, 1000)
+	tr := geom.LocalToGlobalTransformFromPoint(1000, 1000, 1000)
 	n := &tree.MockNode{
 		TotalNumPts: 3,
 		Pts:         stream,
@@ -77,7 +78,7 @@ func TestConsume(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to read tileset.json: %v", err)
 	}
-	expTrans := tr.LocalToGlobal.ColumnMajor()
+	expTrans := tr.ForwardColumnMajor()
 	expected := Tileset{
 		Asset: Asset{
 			Version: "1.0",
@@ -134,7 +135,7 @@ func TestConsumeGltf(t *testing.T) {
 	wg.Add(1)
 	go c.Consume(wc, ec, wg)
 
-	pts := []geom.Point32{
+	pts := []model.Point{
 		{X: 0, Y: 0, Z: 0, R: 160, G: 166, B: 203, Intensity: 7, Classification: 3},
 		{X: 1, Y: 1, Z: 1, R: 186, G: 200, B: 237, Intensity: 7, Classification: 3},
 		{X: 2, Y: 2, Z: 2, R: 156, G: 167, B: 204, Intensity: 7, Classification: 3},
@@ -152,8 +153,8 @@ func TestConsumeGltf(t *testing.T) {
 	pt1.Next = pt2
 	pt2.Next = pt3
 
-	tr := geom.LocalCRSFromPoint(2000, 1000, 1000)
-	expTrans := tr.LocalToGlobal.ColumnMajor()
+	tr := geom.LocalToGlobalTransformFromPoint(2000, 1000, 1000)
+	expTrans := tr.ForwardColumnMajor()
 	stream := geom.NewLinkedPointStream(pt1, 3)
 	n := &tree.MockNode{
 		TotalNumPts: 3,

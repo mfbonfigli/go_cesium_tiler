@@ -3,7 +3,7 @@ package tiler
 import (
 	"runtime"
 
-	"github.com/mfbonfigli/gocesiumtiler/v2/mutator"
+	"github.com/mfbonfigli/gocesiumtiler/v2/tiler/mutator"
 	"github.com/mfbonfigli/gocesiumtiler/v2/version"
 )
 

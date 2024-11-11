@@ -6,13 +6,14 @@ import (
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/conv/coor"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/geom"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/las"
-	"github.com/mfbonfigli/gocesiumtiler/v2/mutator"
+	"github.com/mfbonfigli/gocesiumtiler/v2/tiler/model"
+	"github.com/mfbonfigli/gocesiumtiler/v2/tiler/mutator"
 )
 
 type MockNode struct {
 	Bounds                    geom.BoundingBox
 	ChildNodes                [8]Node
-	Pts                       geom.Point32List
+	Pts                       geom.PointList
 	TotalNumPts               int
 	Root                      bool
 	Leaf                      bool
@@ -25,10 +26,10 @@ type MockNode struct {
 	Ctx         context.Context
 	LoadCalled  bool
 	BuildCalled bool
-	Transform   *geom.Transform
+	Transform   *model.Transform
 }
 
-func (n *MockNode) TransformMatrix() *geom.Transform {
+func (n *MockNode) ToParentCRS() *model.Transform {
 	return n.Transform
 }
 func (n *MockNode) BoundingBox() geom.BoundingBox {
@@ -37,7 +38,7 @@ func (n *MockNode) BoundingBox() geom.BoundingBox {
 func (n *MockNode) Children() [8]Node {
 	return n.ChildNodes
 }
-func (n *MockNode) Points() geom.Point32List {
+func (n *MockNode) Points() geom.PointList {
 	return n.Pts
 }
 func (n *MockNode) TotalNumberOfPoints() int {

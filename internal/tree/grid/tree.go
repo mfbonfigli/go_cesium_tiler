@@ -9,7 +9,8 @@ import (
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/geom"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/las"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/tree"
-	"github.com/mfbonfigli/gocesiumtiler/v2/mutator"
+	"github.com/mfbonfigli/gocesiumtiler/v2/tiler/model"
+	"github.com/mfbonfigli/gocesiumtiler/v2/tiler/mutator"
 )
 
 // Node implements both the Tree and Node interfaces. The points of the point cloud
@@ -71,10 +72,10 @@ type Node struct {
 	// if less its points will be rolled up to the parent
 	minPointsPerChildren int
 
-	// transform is a pointer to the Transform matrix that convers this node coordinates
+	// localToGlobal is a pointer to the Transform matrix that convers this node coordinates
 	// into the parent coordinates. If nil the identity trasform is implied. For the Root node
-	// of a tree this transform convers the local coordinates into the EPSG 4978 CRS.
-	transform *geom.Transform
+	// of a tree this localToGlobal convers the local coordinates into the EPSG 4978 CRS.
+	localToGlobal *model.Transform
 
 	sync.Mutex
 }
@@ -89,7 +90,7 @@ func NewTree(opts ...func(*Node)) *Node {
 		gridSize:             1,
 		loadWorkersNumber:    1,
 		minPointsPerChildren: 10000,
-		transform:            nil,
+		localToGlobal:        nil,
 	}
 	for _, optFn := range opts {
 		optFn(t)
@@ -277,8 +278,8 @@ func (t *Node) BoundingBox() geom.BoundingBox {
 	return t.bounds
 }
 
-func (t *Node) TransformMatrix() *geom.Transform {
-	return t.transform
+func (t *Node) ToParentCRS() *model.Transform {
+	return t.localToGlobal
 }
 
 func (t *Node) Children() [8]tree.Node {
@@ -305,7 +306,7 @@ func (t *Node) Children() [8]tree.Node {
 			gridSize:             t.gridSize / 2,
 			childrenBuilt:        false,
 			minPointsPerChildren: t.minPointsPerChildren,
-			transform:            nil,
+			localToGlobal:        nil,
 		}
 		// Children MUST be built before returned
 		v.Build()
@@ -315,7 +316,7 @@ func (t *Node) Children() [8]tree.Node {
 	return t.children
 }
 
-func (t *Node) Points() geom.Point32List {
+func (t *Node) Points() geom.PointList {
 	return geom.NewLinkedPointStream(t.pts, t.numPoints)
 }
 
@@ -340,7 +341,7 @@ func (t *Node) GeometricError() float64 {
 	return math.Sqrt(t.gridSize * t.gridSize * 3)
 }
 
-func (t *Node) getChildrenIndex(p geom.Point32) int {
+func (t *Node) getChildrenIndex(p model.Point) int {
 	if float64(p.X) < t.bounds.Xmid && float64(p.Y) < t.bounds.Ymid && float64(p.Z) < t.bounds.Zmid {
 		return 0
 	} else if float64(p.X) >= t.bounds.Xmid && float64(p.Y) < t.bounds.Ymid && float64(p.Z) < t.bounds.Zmid {

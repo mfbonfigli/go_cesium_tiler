@@ -3,7 +3,7 @@ package utils
 import (
 	"testing"
 
-	"github.com/mfbonfigli/gocesiumtiler/v2/internal/geom"
+	"github.com/mfbonfigli/gocesiumtiler/v2/tiler/model"
 )
 
 func TestCompareWithTolerance(t *testing.T) {
@@ -25,8 +25,8 @@ func TestCompareWithTolerance(t *testing.T) {
 }
 
 func TestCompareCoord(t *testing.T) {
-	actual := geom.Vector3{X: 1, Y: 1, Z: 1}
-	reference := geom.Vector3{X: 2, Y: 3, Z: 4}
+	actual := model.Vector{X: 1, Y: 1, Z: 1}
+	reference := model.Vector{X: 2, Y: 3, Z: 4}
 	err := CompareCoord(actual, reference, 5)
 	if err != nil {
 		t.Errorf("unexpected err %v", err)
