@@ -309,7 +309,7 @@ func (m *ClassBasedColorMutator) Mutate(pt model.Point, localToGlobal model.Tran
 
 The sampling occurs using a hybrid, lazy octree data structure. The algorithm works as follows:
 1. All points are stored in a linked tree backed by an underlying array: this provides efficient list manipulations operations (splitting, adding, removing) and avoids
- dynamic allocations of slices. The coordinates are internally converted to EPSG 4978. The backing array helps with CPU cache friendliness and helps achieving measurable speed improvements of up to 20% compared to a standard linked list.
+ dynamic allocations of slices. The coordinates are internally converted to EPSG 4978 and then to a local CRS with Z-axis normal to the WGS84 ellipsoid. The backing array helps with CPU cache friendliness and helps achieving measurable speed improvements of up to 20% compared to a standard linked list.
 2. An octree cell is created. Every cell stores N points (variable). A cell also has a grid spacing property. The root node has a spacing set to the
  provided resolution. 
 3. The points are traversed. Each point will fall into one of the cells the space has been divided by the given grid spacing. If the point is 
@@ -318,6 +318,7 @@ The sampling occurs using a hybrid, lazy octree data structure. The algorithm wo
 If an octant however has a number of parked points that is less than the min-points-per-node, the parked points for that octant are rolled up to the current node. Similarly 
 if the current node has a depth equal to the configured max depth.
 5. Whenever the children are retrieved, the previously parked points are used to create child nodes on demand using the same algorithm, lazily.
+6. The points are written in the final artifacts with coordinates relative to the local CRS, however a global transform is applied at the tileset root to convert points back to the EPSG 4978 CRS required by Cesium.
 
 ## Precompiled Binaries
 Along with the source code, a prebuilt binary for both Linux and Windows x64 is provided for each release of the tool in the github page.
@@ -325,7 +326,7 @@ Along with the source code, a prebuilt binary for both Linux and Windows x64 is 
 ## Future work and support
 
 Further work needs to be done, such as: 
-- Statically build and link Proj9.5.0 with CURL support enabled
+- Statically build and link Proj9.5.0 with cURL support enabled
 - Add support for point cloud compression
 - Extract CRS metadata automatically from LAS VLRs
 - Add support for LAZ (compressed LAS) files
