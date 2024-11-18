@@ -12,6 +12,7 @@ type TilerEvent int
 const (
 	EventReadLasHeaderStarted TilerEvent = iota
 	EventReadLasHeaderCompleted
+	EventReadCRSDetected
 	EventReadLasHeaderError
 	EventPointLoadingStarted
 	EventPointLoadingCompleted

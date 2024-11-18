@@ -96,6 +96,7 @@ func (t *GoCesiumTiler) ProcessFiles(inputLasFiles []string, outputFolder string
 		return err
 	}
 	emitEvent(EventReadLasHeaderCompleted, opts, start, inputDesc, fmt.Sprintf("las header read completed: found %d points", lasFile.NumberOfPoints()))
+	emitEvent(EventReadCRSDetected, opts, start, inputDesc, fmt.Sprintf("crs: %s", lasFile.GetCRS()))
 
 	// LOAD POINTS
 	emitEvent(EventPointLoadingStarted, opts, start, inputDesc, "point loading started")

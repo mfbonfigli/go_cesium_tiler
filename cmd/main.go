@@ -109,7 +109,7 @@ func getFlags(c *cliOpts) []cli.Flag {
 			Name:        "crs",
 			Aliases:     []string{"e", "epsg"},
 			Value:       c.crs,
-			Usage:       "String representing the input CRS. For example, EPSG:4326 or a generic Proj4 string. Bare numbers will be interpreted as EPSG codes.",
+			Usage:       "String representing the input CRS. For example, EPSG:4326 or a generic Proj4 string. Bare numbers will be interpreted as EPSG codes. If empty the system will attempt to autodetect the CRS from the LAS metadata. In case of multiple LAS files, the CRS must be consistent else an error will be thrown.",
 			Destination: &c.crs,
 		},
 		&cli.Float64Flag{
@@ -193,9 +193,6 @@ func (c *cliOpts) validate() {
 	if c.output == "" {
 		log.Fatal("output flag must be set")
 	}
-	if c.crs == "" {
-		log.Fatal("source crs must be defined")
-	}
 	if c.maxDepth <= 1 || c.maxDepth > 20 {
 		log.Fatal("depth should be between 1 and 20")
 	}
@@ -214,6 +211,10 @@ func (c *cliOpts) validate() {
 }
 
 func (c *cliOpts) print() {
+	crsMsg := c.crs
+	if c.crs == "" {
+		crsMsg = "(autodetect from LAS metadata)"
+	}
 	fmt.Printf(`*** Execution settings:
 - Source CRS: %s,
 - Max Depth: %d,
@@ -224,7 +225,7 @@ func (c *cliOpts) print() {
 - Join Clouds: %v
 - Tileset Version: %v
 
-`, c.crs, c.maxDepth, c.resolution, c.minPoints, c.zOffset, c.eightBit, c.join, c.version)
+`, crsMsg, c.maxDepth, c.resolution, c.minPoints, c.zOffset, c.eightBit, c.join, c.version)
 }
 
 func (c *cliOpts) getTilerOptions() *tiler.TilerOptions {

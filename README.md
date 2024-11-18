@@ -123,7 +123,7 @@ There are two commands, `file` and `folder`:
 These flags are applicable to both the `file` and the `folder` commands
 ```
    --out value, -o value                  full path of the output folder where to save the resulting Cesium tilesets
-   --crs value, --epsg value, -e value    String representing the input CRS. It could be e.g. "EPSG:32633", just "32633", or a full Proj4 or WKT string.
+   --crs value, --epsg value, -e value    String representing the input CRS. For example, and EPSG code like EPSG:4326 or EPSG:28355+5773 or a generic Proj4 or WKT string. Bare numbers will be interpreted as EPSG codes. If empty the system will attempt to autodetect the CRS from the LAS metadata. In case of multiple LAS files, the CRS must be consistent else an error will be thrown.
    --resolution value, -r value           minimum resolution of the 3d tiles, in meters. approximately represets the maximum sampling distance between any two points at the lowest level of detail (default: 20)
    --z-offset value, -z value             z offset to apply to the point, in meters. only use it if the input elevation is referred to the WGS84 ellipsoid or geoid (default: 0)
    --depth value, -d value                maximum depth of the output tree. (default: 10)

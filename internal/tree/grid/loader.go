@@ -21,8 +21,9 @@ type loader struct {
 	workers             int
 }
 
-// load the points from the LasReader r into the node n
+// load the points from the LasReader r into the node n and then closes the reader
 func (l *loader) load(n *Node, r las.LasReader, ctx context.Context) (err error) {
+	defer r.Close()
 	numPts := r.NumberOfPoints()
 	if numPts == 0 {
 		return fmt.Errorf("las with no points")

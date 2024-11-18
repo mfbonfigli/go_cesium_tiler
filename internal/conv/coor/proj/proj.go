@@ -81,7 +81,17 @@ func (cc *projCoordinateConverter) getProjection(source string, target string) (
 	if _, err := os.Stat(cc.searchPath); err == nil {
 		ctx.SetSearchPaths([]string{cc.searchPath})
 	}
-	pj, err := ctx.NewCRSToCRS(source, target, nil)
+	sourcePj, err := ctx.New(source)
+	if err != nil {
+		return nil, err
+	}
+	defer sourcePj.Destroy()
+	targetPJ, err := ctx.New(target)
+	if err != nil {
+		return nil, err
+	}
+	defer targetPJ.Destroy()
+	pj, err := ctx.NewCRSToCRSFromPJ(sourcePj, targetPJ, nil, "")
 	if err != nil {
 		return nil, fmt.Errorf("unable to initialize projection between %s and %s: %w", source, target, err)
 	}

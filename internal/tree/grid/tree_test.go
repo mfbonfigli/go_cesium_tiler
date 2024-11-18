@@ -288,6 +288,9 @@ func TestGridTreeBuild(t *testing.T) {
 			}
 		}
 	}
+	if !reader.CloseCalled {
+		t.Errorf("expected reader to be closed but was not")
+	}
 }
 
 func TestGetBoundingBoxRegion(t *testing.T) {

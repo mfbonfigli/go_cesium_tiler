@@ -7,9 +7,10 @@ import (
 )
 
 type MockLasReader struct {
-	Cur int
-	Pts []geom.Point64
-	CRS string
+	Cur         int
+	Pts         []geom.Point64
+	CRS         string
+	CloseCalled bool
 }
 
 // NumberOfPoints returns the number of points stored in the LAS file
@@ -25,4 +26,7 @@ func (m *MockLasReader) GetNext() (geom.Point64, error) {
 		return m.Pts[m.Cur-1], nil
 	}
 	return geom.Point64{}, fmt.Errorf("point not available")
+}
+func (m *MockLasReader) Close() {
+	m.CloseCalled = true
 }
