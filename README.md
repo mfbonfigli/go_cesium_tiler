@@ -48,8 +48,7 @@ gocesiumtiler V2 offers the following features:
 
 **New from v2.0.0-gamma**: Convertion between EGM and WGS84 elevations is now delegated to Proj. Just make sure to specify the correct input vertical datum and make sure the `share` folder contains the required vertical grids. These are not included but can be downloaded from the [Proj CDN](https://cdn.proj.org/)
 
-The currently tool uses the version 9.5.0 of the well-known Proj.4 library to handle coordinate conversion. The input CRS
-specified by just providing the relative EPSG code, a Proj4 string or WKT text.
+The currently tool uses the version 9.5.0 of the well-known Proj.4 library to handle coordinate conversion. The input CRS specified by just providing the relative EPSG code, a Proj4 string or WKT text, or letting the library figure it out automatically from the LAS metadata.
 
 Speed is a major concern for this tool, thus it has been chosen to store the data completely in memory. If you don't 
 have enough memory the tool will fail, so if you have really big LAS files and not enough RAM it is advised to split 
@@ -66,6 +65,7 @@ You can preview a couple of tilesets generated from this tool at this [website](
 ##### Version 2.0.0
 * Most of the code has been rewritten from the ground up, achieving much faster tiling with lower memory usage
 * Uses Proj v9.5.0: all projections supported by the Proj library are automatically supported by gocesiumtiler.
+* Able to autodetect CRS from GeoTIFF or WKT metadata embedded in the LAS VLRs.
 * Experimentally supports 3D Tiles v1.1 (GLTF) in addition to v1.0 (PNTS)
 * Allows merging multiple LAS files into a single 3D tile
 * New options to fine tune the sampling quality: min points per tile, resolution and max tree depth
@@ -180,10 +180,10 @@ gocesiumtiler folder -o C:\out -e EPSG:32633+3855 -r 10 -m 1000 -d 12 -j C:\las
 ```
 
 #### Example 3
-Convert a single LAS file at `C:\las\file.las`, write the output tileset in the folder `C:\out`, use the system defaults
+Convert a single LAS file at `C:\las\file.las`, write the output tileset in the folder `C:\out`, use the system defaults and let gocesiumtiler extract the CRS metadata from the LAS.
 
 ```
-gocesiumtiler file -out C:\out -crs 32633 C:\las\file.las
+gocesiumtiler file -out C:\out C:\las\file.las
 ```
 or, using the shorthand notation:
 
@@ -328,7 +328,6 @@ Along with the source code, a prebuilt binary for both Linux and Windows x64 is 
 Further work needs to be done, such as: 
 - Statically build and link Proj9.5.0 with cURL support enabled
 - Add support for point cloud compression
-- Extract CRS metadata automatically from LAS VLRs
 - Add support for LAZ (compressed LAS) files
 
 Contributors and their ideas are welcome.

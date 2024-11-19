@@ -62,7 +62,8 @@ func NewGoCesiumTiler() (*GoCesiumTiler, error) {
 }
 
 // ProcessFolder converts all LAS files found in the provided input folder converting them into separate tilesets
-// each tileset is stored in a subdirectory in the outputFolder named after the filename
+// each tileset is stored in a subdirectory in the outputFolder named after the filename.
+// If sourceCRS is left empty, the CRS will attempted to be autodetected from LAS GeoTIFF or WKT VLRs.
 func (t *GoCesiumTiler) ProcessFolder(inputFolder, outputFolder string, sourceCRS string, opts *TilerOptions, ctx context.Context) error {
 	files, err := utils.FindLasFilesInFolder(inputFolder)
 	if err != nil {
@@ -78,7 +79,8 @@ func (t *GoCesiumTiler) ProcessFolder(inputFolder, outputFolder string, sourceCR
 	return nil
 }
 
-// ProcessFiles converts the specified LAS files as a single cesium tileset and stores them in the
+// ProcessFiles converts the specified LAS files as a single cesium tileset and stores them in the given output folder.
+// If sourceCRS is left empty, the CRS will attempted to be autodetected from LAS GeoTIFF or WKT VLRs.
 func (t *GoCesiumTiler) ProcessFiles(inputLasFiles []string, outputFolder string, sourceCRS string, opts *TilerOptions, ctx context.Context) error {
 	start := time.Now()
 	tr := t.treeProvider(opts)
