@@ -34,7 +34,7 @@ func NewWriter(basePath string, options ...func(*StandardWriter)) (*StandardWrit
 			if v == version.TilesetVersion_1_0 {
 				return NewStandardConsumer(WithGeometryEncoder(NewPntsEncoder()))
 			}
-			return NewStandardConsumer(WithGeometryEncoder(NewGltfEncoder()))
+			return NewStandardConsumer(WithGeometryEncoder(NewGltfPointCloudEncoder()))
 		},
 	}
 	for _, optFn := range options {
