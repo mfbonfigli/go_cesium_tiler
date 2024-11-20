@@ -15,17 +15,14 @@
 streamed, automatically generating the appropriate level of details and including additional information for each point 
 such as color, laser intensity and classification.   
 
-## What's new: V2
-gocesiumtiler V2 has been released in preview mode and it introduces several important improvements over V1. Please refer to the changelog for a full list of changes.
+## What's new: V2.0.0
+gocesiumtiler V2.0.0 has been released introducing several important improvements over V1. Please refer to the changelog for a full list of changes.
 
 This release is backward incompatible compared to V1 and also deprecates several options, most of which were not of much interest.
 Some of these might be added in future minor updates of V2.
 - Refine mode "REPLACE" is currently unavailable in V2
 - Recursive options is currently unavailable in V2
 - Algorithm cannot be chosen anymore: grid sampling is the only one available and is implicitly used
-
-Note that V2.0.0-gamma+ releases are incompatible with V2 beta. This is to be expected as these are pre-release versions.
-The major change between the two regards the support for the latest Proj library versions.
 
 ## Features
 gocesiumtiler V2 offers the following features:
@@ -41,8 +38,8 @@ gocesiumtiler V2 offers the following features:
 - Can read LAS with colors encoded in 8bit color space rather than 16bit
 - Can be used in other golang programs as a library with a simple to use interface
 - Supports the programmatic definition of custom mutators to manipulate points and attributes
-- Uses the Proj library and can receive as input any EPSG code, Proj4 or WKT projection definition supported by Proj 9.5.0+
-  (for some the relevant Proj grid files should be installed)
+- Can automatically extract CRS metadata from LAS (if present) or a CRS can be provided in form of EPSG code, Proj4 string or WKT definition.
+- Conversion is done via well knwon Proj 9.5.0 library (for some projections the relevant Proj grid files should be installed separately)
 - Uses a "ADD" refine method, which minimizes redundant data across tiles
 
 
@@ -79,13 +76,14 @@ You can preview a couple of tilesets generated from this tool at this [website](
 * The CLI has been rewritten from scratch, many options changed name or were added/removed
 * `GOCESIUMTILER_WORKDIR` has been deprecated
 
+**Note**: The final V2.0.0 version significantly differs from "pre-release" versions V2.0.0 alpha, beta and gamma. The V2.0.0 final changelog consolidates all changes from V1.
+
 ## Precompiled Binaries
 Along with the source code a prebuilt binary for Windows x64 and Linux x64 is provided for each release of the tool in the github page.
 Binaries for other systems at the moment are not provided.
 
 ## Environment setup and compiling from sources
-Please note that since release v2.0.0 gamma the development setup has changed considerably and now leverages Docker for reproducible builds. 
-Please refer to the [DEVELOPMENT.md](DEVELOPMENT.md) file for further info on how to setup a local development environment in both Windows and Linux.
+Please note that the development setup has changed considerably from V2.0.0 gamma and now leverages Docker for reproducible builds. 
 
 In general local development requires:
 
@@ -93,7 +91,7 @@ In general local development requires:
 - Building Proj as a static library
 - Building gocesiumtiler linking it statically to Proj and its dependencies
 
-See [DEVELOPMENT.md](DEVELOPMENT.md)
+Please refer to the [DEVELOPMENT.md](DEVELOPMENT.md) file for further info on how to setup a local development environment in both Windows and Linux.
 
 ## Installation instructions
 
@@ -143,17 +141,23 @@ These commands are specific to the `folder` command:
 Previous releases of gocesiumtiler had a dedicated flag for EGM to WGS84 ellipsoid elevation conversion. This has been deprecated and now the vertical datum conversion is fully delegated to Proj.
 This means that to convert the vertical coordinates in case they are not referred to the WGS84 ellipsoid the input CRS definition needs to include the definition for the vertical datum.
 
+If the LAS file includes a 3D CRS definition or separate Horizontal and Vertical CRS definitions gocesiumtiler will attempt to use those info automatically. Else if a vertical definition is not included, 
+or the tool fails to detect the correct CRS, the right definition can be provided manually via the `--crs` flag.
+
 This can be achieved for example by providing a composite CRS EPSG code. 
 
 For example, if a LAS file contains coordinates in the `EPSG:32633` CRS with elevations referred to the EGM2008 (`EPSG:3855`), run the command with:
+
 ```
 --crs EPSG:32633+3855
 ```
+
 **NOTE:** This might require to install extra grid files in the `share` folder. In case of issues please make sure please to download the Proj Data grids from the [Proj CDN](https://cdn.proj.org/) and save them in the `share` folder.
 
 ### Usage examples:
 
 #### Example 1
+
 Convert all LAS files in folder `C:\las`, write output tilesets in folder `C:\out`, assume LAS input coordinates expressed 
 in EPSG:32633, with elevations referred to the EGM2008 (EPSG 3855). Use a resolution of 10 meters, create tiles with minimum 1000 points
 and enforce a maximum tree depth of 12:
@@ -163,11 +167,13 @@ gocesiumtiler folder -out C:\out -crs EPSG:32633+3855 -resolution 10 -min-points
 ```
 
 or, using the shorthand notation:
+
 ```
 gocesiumtiler folder -o C:\out -e EPSG:32633+3855 -r 10 -m 1000 -d 12 C:\las
 ```
 
 #### Example 2
+
 Like Example 1 but merge all LAS files in `C:\las` into a single 3D Tileset
 
 ```
@@ -180,11 +186,13 @@ gocesiumtiler folder -o C:\out -e EPSG:32633+3855 -r 10 -m 1000 -d 12 -j C:\las
 ```
 
 #### Example 3
+
 Convert a single LAS file at `C:\las\file.las`, write the output tileset in the folder `C:\out`, use the system defaults and let gocesiumtiler extract the CRS metadata from the LAS.
 
 ```
 gocesiumtiler file -out C:\out C:\las\file.las
 ```
+
 or, using the shorthand notation:
 
 ```
@@ -329,6 +337,7 @@ Further work needs to be done, such as:
 - Statically build and link Proj9.5.0 with cURL support enabled
 - Add support for point cloud compression
 - Add support for LAZ (compressed LAS) files
+- Make Intensity and Classification optional attributes of the output cloud to save disk space
 
 Contributors and their ideas are welcome.
 

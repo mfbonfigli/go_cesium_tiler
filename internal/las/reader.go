@@ -37,7 +37,6 @@ type CombinedFileLasReader struct {
 func NewCombinedFileLasReader(files []string, crs string, eightBitColor bool) (*CombinedFileLasReader, error) {
 	r := &CombinedFileLasReader{}
 	crsProvided := crs != ""
-	fmt.Println(crsProvided)
 	for _, f := range files {
 		fr, err := NewGoLasReader(f, crs, eightBitColor)
 		if err != nil {
