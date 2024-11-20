@@ -11,8 +11,9 @@ import (
 	"sync"
 	"time"
 
-	tiler "github.com/mfbonfigli/gocesiumtiler/v2"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/utils"
+	"github.com/mfbonfigli/gocesiumtiler/v2/tiler"
+	"github.com/mfbonfigli/gocesiumtiler/v2/tiler/mutator"
 	"github.com/mfbonfigli/gocesiumtiler/v2/version"
 	"github.com/urfave/cli/v2"
 )
@@ -22,7 +23,7 @@ var tilerProvider func() (tiler.Tiler, error) = func() (tiler.Tiler, error) {
 	return tiler.NewGoCesiumTiler()
 }
 
-var cmdVersion = "2.0.0-gamma"
+var cmdVersion = "2.0.0"
 
 // GitCommit is injected dynamically at build time via `go build -ldflags "-X main.GitCommit=XYZ"`
 var GitCommit string = "(na)"
@@ -108,7 +109,7 @@ func getFlags(c *cliOpts) []cli.Flag {
 			Name:        "crs",
 			Aliases:     []string{"e", "epsg"},
 			Value:       c.crs,
-			Usage:       "String representing the input CRS. For example, EPSG:4326 or a generic Proj4 string. Bare numbers will be interpreted as EPSG codes.",
+			Usage:       "String representing the input CRS. For example, EPSG:4326 or a generic Proj4 string. Bare numbers will be interpreted as EPSG codes. If empty the system will attempt to autodetect the CRS from the LAS metadata. In case of multiple LAS files, the CRS must be consistent else an error will be thrown.",
 			Destination: &c.crs,
 		},
 		&cli.Float64Flag{
@@ -145,6 +146,12 @@ func getFlags(c *cliOpts) []cli.Flag {
 			Usage:       "set to interpret the input points color as part of a 8bit color space",
 			Destination: &c.eightBit,
 		},
+		&cli.Float64Flag{
+			Name:        "subsample",
+			Value:       c.subsamplePct,
+			Usage:       "Approximate percent of points to keep in the final point cloud, between 0.01 (1%) and 1 (100%)",
+			Destination: &c.subsamplePct,
+		},
 		&cli.StringFlag{
 			Name:        "version",
 			Aliases:     []string{"v"},
@@ -156,36 +163,35 @@ func getFlags(c *cliOpts) []cli.Flag {
 }
 
 type cliOpts struct {
-	output     string
-	crs        string
-	maxDepth   int
-	minPoints  int
-	resolution float64
-	zOffset    float64
-	eightBit   bool
-	join       bool
-	version    string
+	output       string
+	crs          string
+	maxDepth     int
+	minPoints    int
+	resolution   float64
+	zOffset      float64
+	subsamplePct float64
+	eightBit     bool
+	join         bool
+	version      string
 }
 
 func defaultCliOptions() *cliOpts {
 	return &cliOpts{
-		crs:        "",
-		maxDepth:   10,
-		minPoints:  5000,
-		resolution: 20,
-		zOffset:    0,
-		eightBit:   false,
-		join:       false,
-		version:    "1.0",
+		crs:          "",
+		maxDepth:     10,
+		minPoints:    5000,
+		resolution:   20,
+		subsamplePct: 1,
+		zOffset:      0,
+		eightBit:     false,
+		join:         false,
+		version:      "1.0",
 	}
 }
 
 func (c *cliOpts) validate() {
 	if c.output == "" {
 		log.Fatal("output flag must be set")
-	}
-	if c.crs == "" {
-		log.Fatal("source crs must be defined")
 	}
 	if c.maxDepth <= 1 || c.maxDepth > 20 {
 		log.Fatal("depth should be between 1 and 20")
@@ -196,12 +202,19 @@ func (c *cliOpts) validate() {
 	if c.resolution < 0.5 || c.resolution > 1000 {
 		log.Fatal("resolution should be between 1 and 1000 meters")
 	}
+	if c.subsamplePct < 0.01 || c.subsamplePct > 1 {
+		log.Fatal("subsample should be a value between 0.01 and 1")
+	}
 	if _, ok := version.Parse(c.version); !ok {
 		log.Fatal("invalid tileset version, the only allowed values are '1.0' and '1.1'")
 	}
 }
 
 func (c *cliOpts) print() {
+	crsMsg := c.crs
+	if c.crs == "" {
+		crsMsg = "(autodetect from LAS metadata)"
+	}
 	fmt.Printf(`*** Execution settings:
 - Source CRS: %s,
 - Max Depth: %d,
@@ -212,7 +225,7 @@ func (c *cliOpts) print() {
 - Join Clouds: %v
 - Tileset Version: %v
 
-`, c.crs, c.maxDepth, c.resolution, c.minPoints, c.zOffset, c.eightBit, c.join, c.version)
+`, crsMsg, c.maxDepth, c.resolution, c.minPoints, c.zOffset, c.eightBit, c.join, c.version)
 }
 
 func (c *cliOpts) getTilerOptions() *tiler.TilerOptions {
@@ -221,9 +234,15 @@ func (c *cliOpts) getTilerOptions() *tiler.TilerOptions {
 	if !ok {
 		log.Fatal("unrecongnized tileset version")
 	}
+	mutators := []mutator.Mutator{
+		mutator.NewZOffset(float32(c.zOffset)),
+	}
+	if c.subsamplePct < 1 {
+		mutators = append(mutators, mutator.NewSubsampler(c.subsamplePct))
+	}
 	return tiler.NewTilerOptions(
 		tiler.WithEightBitColors(c.eightBit),
-		tiler.WithElevationOffset(c.zOffset),
+		tiler.WithMutators(mutators),
 		tiler.WithGridSize(c.resolution),
 		tiler.WithMaxDepth(c.maxDepth),
 		tiler.WithMinPointsPerTile(c.minPoints),

@@ -28,13 +28,13 @@ The Dockerfile is organized as a multi-stage build.
 4. The build artifacts are copied in a final scratch image where they are ready to be copied out to the host.
 
 ## Local Development environment setup
-Two approaches are possible, using docker to run builds in a reproducible environment or building it locally setting up the local machine.
+Two approaches to local development are possible, the first is using docker to run builds in a reproducible environment, the second is building the code locally without docker.
 
 Note that all the options mentioned statically link Proj to the final build executable, this ensures the system builds a single highly portable binary that embeds all required dependencies. 
 
 ### Option 1. Install docker and use `build.sh` or `build.ps1` to build the code and run the tests. 
 
-The pro here is that this should work in any environment and ensures that the final executable build is reproducible. It recommended to always run a "dockerized" build before creating a PR.
+The benefit of using Dockerized builds is enabling reproducible builds. It recommended to always run a "dockerized" build before creating a PR.
 
 To build just run in a powershell console:
 ```
@@ -43,12 +43,13 @@ To build just run in a powershell console:
 
 ### Option 2. Setup the local machine for local development without Docker.
 
-This approach is more challenging and the steps are different depending whether you are development under Windows or Linux. In general the environment needs to be set up mimicking the steps described in the `Dockerfile`. 
+This approach is more challenging and the steps are different depending whether you are developing under Windows or Linux. In general the environment needs to be set up mimicking the steps described in the `Dockerfile`. 
 
-Since the dockerfile has been written designed to run builds in Linux, that is also documenting how to setup a linux dev environment. In the following we will focus mostly instead on the steps to setup a dev environment under Windows.
+The provided Dockerfile has been written to run builds in Linux, and as such it is also documenting how to setup a local Linux dev environment. 
+For this reason, in the following we will focus mostly instead on the steps needed to setup a dev environment under Windows.
 
 ### **Setup a Windows development environment**
-The commands in the following are supposed to be executed from a powershell console.
+The commands that follow are supposed to be executed from a Powershell console.
 
 **1. Install golang**
 

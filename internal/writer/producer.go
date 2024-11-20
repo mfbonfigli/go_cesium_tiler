@@ -27,6 +27,11 @@ func NewStandardProducer(basepath string, subfolder string) Producer {
 // Parses a tree node and submits WorkUnits the the provided workchannel. Should be called only on the tree root node.
 // Closes the channel when all work is submitted.
 func (p *StandardProducer) Produce(work chan *WorkUnit, errchan chan error, wg *sync.WaitGroup, node tree.Node, ctx context.Context) {
+	defer func() {
+		if r := recover(); r != nil {
+			errchan <- fmt.Errorf("panic: %v", r)
+		}
+	}()
 	defer close(work)
 	p.produce(errchan, p.basePath, node, work, wg, ctx)
 	wg.Done()
@@ -49,7 +54,7 @@ func (p *StandardProducer) produce(errchan chan error, basePath string, node tre
 	}
 
 	// iterate all non nil children and recursively submit all work units
-	for i, child := range node.GetChildren() {
+	for i, child := range node.Children() {
 		if child != nil {
 			p.produce(errchan, path.Join(basePath, strconv.Itoa(i)), child, work, wg, ctx)
 		}

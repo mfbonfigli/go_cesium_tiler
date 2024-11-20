@@ -2,10 +2,9 @@ package writer
 
 import (
 	"encoding/json"
+	"math"
 	"path"
 
-	"github.com/mfbonfigli/gocesiumtiler/v2/internal/conv/coor"
-	"github.com/mfbonfigli/gocesiumtiler/v2/internal/geom"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/tree"
 	"github.com/mfbonfigli/gocesiumtiler/v2/version"
 	"github.com/qmuntal/gltf"
@@ -71,21 +70,12 @@ func (e *GltfEncoder) Filename() string {
 	return "content.glb"
 }
 
-func NewGltfEncoder() GeometryEncoder {
+func NewGltfEncoder() *GltfEncoder {
 	return &GltfEncoder{}
 }
 
-func (e *GltfEncoder) Write(node tree.Node, conv coor.CoordinateConverter, folderPath string) error {
-	pts := node.GetPoints(conv)
-	cX, cY, cZ, err := node.GetCenter(conv)
-	if err != nil {
-		return err
-	}
-	// Evaluating average X, Y, Z to express coords relative to tile center
-	averageXYZ, err := e.computeAverageXYZFromPointStream(pts, cX, cY, cZ)
-	if err != nil {
-		return err
-	}
+func (e *GltfEncoder) Write(node tree.Node, folderPath string) error {
+	pts := node.Points()
 
 	doc := gltf.NewDocument()
 	doc.Asset = gltf.Asset{
@@ -104,12 +94,16 @@ func (e *GltfEncoder) Write(node tree.Node, conv coor.CoordinateConverter, folde
 		if err != nil {
 			return err
 		}
-		coords[i][0] = float32(float64(pt.X) + cX - averageXYZ[0])
-		coords[i][1] = float32(float64(pt.Y) + cY - averageXYZ[1])
-		coords[i][2] = float32(float64(pt.Z) + cZ - averageXYZ[2])
-		colors[i][0] = pt.R
-		colors[i][1] = pt.G
-		colors[i][2] = pt.B
+		coords[i][0] = pt.X
+		coords[i][1] = pt.Y
+		coords[i][2] = pt.Z
+
+		// LAS colors are typically in the sRGB space, however GLTF specs require
+		// COLOR_0 for meshes to be in the linear RGB space, hence we need to convert
+		// the colors back to linear RGB
+		colors[i][0] = uint8(math.Pow((float64(pt.R)/255), 2.2) * 255)
+		colors[i][1] = uint8(math.Pow((float64(pt.G)/255), 2.2) * 255)
+		colors[i][2] = uint8(math.Pow((float64(pt.B)/255), 2.2) * 255)
 		intensities[i] = uint16(pt.Intensity)
 		classifications[i] = uint16(pt.Classification)
 	}
@@ -140,12 +134,11 @@ func (e *GltfEncoder) Write(node tree.Node, conv coor.CoordinateConverter, folde
 		}},
 	}}
 	// gltf is Y up, however Cesium is Z up. This means that a rotation transform needs to be applied.
-	// additionally a translation too needs to be applied as the coordinates are relative to their center
 	doc.Nodes = []*gltf.Node{
 		{
 			Name:   "PointCloud",
 			Mesh:   gltf.Index(0),
-			Matrix: [16]float64{1, 0, 0, 0, 0, 0, -1, 0, 0, 1, 0, 0, averageXYZ[0], averageXYZ[2], -averageXYZ[1], 1},
+			Matrix: [16]float64{1, 0, 0, 0, 0, 0, -1, 0, 0, 1, 0, 0, 0, 0, 0, 1},
 		},
 	}
 	doc.Scenes[0].Nodes = append(doc.Scenes[0].Nodes, 0)
@@ -158,20 +151,4 @@ func (e *GltfEncoder) Write(node tree.Node, conv coor.CoordinateConverter, folde
 
 	pntsFilePath := path.Join(folderPath, e.Filename())
 	return gltf.SaveBinary(doc, pntsFilePath)
-}
-
-func (e *GltfEncoder) computeAverageXYZFromPointStream(pts geom.Point32List, cX, cY, cZ float64) ([]float64, error) {
-	var avgX, avgY, avgZ float64
-	n := pts.Len()
-	for i := 0; i < n; i++ {
-		pt, err := pts.Next()
-		if err != nil {
-			return nil, err
-		}
-		avgX = (avgX / float64(i+1) * float64(i)) + (float64(pt.X)+cX)/float64(i+1)
-		avgY = (avgY / float64(i+1) * float64(i)) + (float64(pt.Y)+cY)/float64(i+1)
-		avgZ = (avgZ / float64(i+1) * float64(i)) + (float64(pt.Z)+cZ)/float64(i+1)
-	}
-	pts.Reset()
-	return []float64{avgX, avgY, avgZ}, nil
 }

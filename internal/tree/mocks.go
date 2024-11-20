@@ -4,15 +4,16 @@ import (
 	"context"
 
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/conv/coor"
-	"github.com/mfbonfigli/gocesiumtiler/v2/internal/conv/elev"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/geom"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/las"
+	"github.com/mfbonfigli/gocesiumtiler/v2/tiler/model"
+	"github.com/mfbonfigli/gocesiumtiler/v2/tiler/mutator"
 )
 
 type MockNode struct {
-	Region                    geom.BoundingBox
-	Children                  [8]Node
-	Pts                       geom.Point32List
+	Bounds                    geom.BoundingBox
+	ChildNodes                [8]Node
+	Pts                       geom.PointList
 	TotalNumPts               int
 	Root                      bool
 	Leaf                      bool
@@ -20,23 +21,24 @@ type MockNode struct {
 	CenterX, CenterY, CenterZ float64
 	// invocation params
 	Las         las.LasReader
-	Conv        coor.CoordinateConverter
 	ConvFactory coor.ConverterFactory
-	Elev        elev.ElevationConverter
+	Mut         mutator.Mutator
 	Ctx         context.Context
 	LoadCalled  bool
 	BuildCalled bool
+	Transform   *model.Transform
 }
 
-func (n *MockNode) GetBoundingBoxRegion(converter coor.CoordinateConverter) (geom.BoundingBox, error) {
-	n.Conv = converter
-	return n.Region, nil
+func (n *MockNode) ToParentCRS() *model.Transform {
+	return n.Transform
 }
-func (n *MockNode) GetChildren() [8]Node {
-	return n.Children
+func (n *MockNode) BoundingBox() geom.BoundingBox {
+	return n.Bounds
 }
-func (n *MockNode) GetPoints(converter coor.CoordinateConverter) geom.Point32List {
-	n.Conv = converter
+func (n *MockNode) Children() [8]Node {
+	return n.ChildNodes
+}
+func (n *MockNode) Points() geom.PointList {
 	return n.Pts
 }
 func (n *MockNode) TotalNumberOfPoints() int {
@@ -51,28 +53,21 @@ func (n *MockNode) IsRoot() bool {
 func (n *MockNode) IsLeaf() bool {
 	return n.Leaf
 }
-func (n *MockNode) ComputeGeometricError() float64 {
+func (n *MockNode) GeometricError() float64 {
 	return n.GeomError
-}
-func (n *MockNode) GetCenter(converter coor.CoordinateConverter) (float64, float64, float64, error) {
-	n.Conv = converter
-	return n.CenterX, n.CenterY, n.CenterZ, nil
 }
 func (n *MockNode) Build() error {
 	n.BuildCalled = true
 	return nil
 }
-func (n *MockNode) GetRootNode() Node {
+func (n *MockNode) RootNode() Node {
 	return n
 }
-func (n *MockNode) IsBuilt() bool {
-	return true
-}
-func (n *MockNode) Load(l las.LasReader, c coor.ConverterFactory, e elev.ElevationConverter, ctx context.Context) error {
+func (n *MockNode) Load(l las.LasReader, c coor.ConverterFactory, m mutator.Mutator, ctx context.Context) error {
 	n.LoadCalled = true
 	n.Ctx = ctx
 	n.Las = l
 	n.ConvFactory = c
-	n.Elev = e
+	n.Mut = m
 	return nil
 }

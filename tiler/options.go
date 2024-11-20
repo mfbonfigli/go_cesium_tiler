@@ -3,6 +3,7 @@ package tiler
 import (
 	"runtime"
 
+	"github.com/mfbonfigli/gocesiumtiler/v2/tiler/mutator"
 	"github.com/mfbonfigli/gocesiumtiler/v2/version"
 )
 
@@ -11,6 +12,7 @@ type TilerEvent int
 const (
 	EventReadLasHeaderStarted TilerEvent = iota
 	EventReadLasHeaderCompleted
+	EventReadCRSDetected
 	EventReadLasHeaderError
 	EventPointLoadingStarted
 	EventPointLoadingCompleted
@@ -26,7 +28,7 @@ const (
 type TilerOptions struct {
 	gridSize         float64
 	maxDepth         int
-	elevationOffset  float64
+	mutators         []mutator.Mutator
 	eightBitColors   bool
 	numWorkers       int
 	minPointsPerTile int
@@ -43,7 +45,6 @@ func NewDefaultTilerOptions() *TilerOptions {
 	return &TilerOptions{
 		gridSize:         20,
 		maxDepth:         10,
-		elevationOffset:  0,
 		numWorkers:       runtime.NumCPU(),
 		minPointsPerTile: 5000,
 		eightBitColors:   false,
@@ -77,11 +78,10 @@ func WithMaxDepth(maxDepth int) tilerOptionsFn {
 	}
 }
 
-// WithElevationOffset sets the Z offset to force on points, in meters. Only use this
-// if the input coordinates are expressed as elevation above the geoid or ellipsoid.
-func WithElevationOffset(offset float64) tilerOptionsFn {
+// WithMutators adds the specified list of mutators to the processing step of the cloud
+func WithMutators(m []mutator.Mutator) tilerOptionsFn {
 	return func(opt *TilerOptions) {
-		opt.elevationOffset = offset
+		opt.mutators = m
 	}
 }
 

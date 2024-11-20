@@ -5,22 +5,20 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/mfbonfigli/gocesiumtiler/v2/internal/conv/coor"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/geom"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/tree"
-	"github.com/mfbonfigli/gocesiumtiler/v2/internal/utils/test"
 	"github.com/mfbonfigli/gocesiumtiler/v2/version"
 )
 
 func TestWriter(t *testing.T) {
 	pt1 := &geom.LinkedPoint{
-		Pt: geom.NewPoint32(1, 2, 3, 4, 5, 6, 7, 8),
+		Pt: geom.NewPoint(1, 2, 3, 4, 5, 6, 7, 8),
 	}
 	pt2 := &geom.LinkedPoint{
-		Pt: geom.NewPoint32(9, 10, 11, 12, 13, 14, 15, 16),
+		Pt: geom.NewPoint(9, 10, 11, 12, 13, 14, 15, 16),
 	}
 	pt3 := &geom.LinkedPoint{
-		Pt: geom.NewPoint32(17, 18, 19, 20, 21, 22, 23, 24),
+		Pt: geom.NewPoint(17, 18, 19, 20, 21, 22, 23, 24),
 	}
 	pt1.Next = pt2
 	pt2.Next = pt3
@@ -35,14 +33,13 @@ func TestWriter(t *testing.T) {
 	root := &tree.MockNode{
 		TotalNumPts: 5,
 		Pts:         stream,
-		Children: [8]tree.Node{
+		ChildNodes: [8]tree.Node{
 			nil,
 			child,
 		},
 	}
 
 	w, err := NewWriter("base",
-		test.GetTestCoordinateConverterFactory(),
 		WithNumWorkers(1),
 		WithBufferRatio(10),
 	)
@@ -54,7 +51,7 @@ func TestWriter(t *testing.T) {
 	w.producerFunc = func(basepath, folder string) Producer {
 		return p
 	}
-	w.consumerFunc = func(cc coor.CoordinateConverter, v version.TilesetVersion) Consumer {
+	w.consumerFunc = func(v version.TilesetVersion) Consumer {
 		return c
 	}
 	err = w.Write(root, "base", context.TODO())
@@ -79,13 +76,13 @@ func TestWriter(t *testing.T) {
 
 func TestWriterWithProducerError(t *testing.T) {
 	pt1 := &geom.LinkedPoint{
-		Pt: geom.NewPoint32(1, 2, 3, 4, 5, 6, 7, 8),
+		Pt: geom.NewPoint(1, 2, 3, 4, 5, 6, 7, 8),
 	}
 	pt2 := &geom.LinkedPoint{
-		Pt: geom.NewPoint32(9, 10, 11, 12, 13, 14, 15, 16),
+		Pt: geom.NewPoint(9, 10, 11, 12, 13, 14, 15, 16),
 	}
 	pt3 := &geom.LinkedPoint{
-		Pt: geom.NewPoint32(17, 18, 19, 20, 21, 22, 23, 24),
+		Pt: geom.NewPoint(17, 18, 19, 20, 21, 22, 23, 24),
 	}
 	pt1.Next = pt2
 	pt2.Next = pt3
@@ -100,14 +97,13 @@ func TestWriterWithProducerError(t *testing.T) {
 	root := &tree.MockNode{
 		TotalNumPts: 5,
 		Pts:         stream,
-		Children: [8]tree.Node{
+		ChildNodes: [8]tree.Node{
 			nil,
 			child,
 		},
 	}
 
 	w, err := NewWriter("base",
-		test.GetTestCoordinateConverterFactory(),
 		WithNumWorkers(1),
 		WithBufferRatio(10),
 	)
@@ -121,7 +117,7 @@ func TestWriterWithProducerError(t *testing.T) {
 	w.producerFunc = func(basepath, folder string) Producer {
 		return p
 	}
-	w.consumerFunc = func(cc coor.CoordinateConverter, v version.TilesetVersion) Consumer {
+	w.consumerFunc = func(v version.TilesetVersion) Consumer {
 		return c
 	}
 	err = w.Write(root, "base", context.TODO())
@@ -146,13 +142,13 @@ func TestWriterWithProducerError(t *testing.T) {
 
 func TestWriterWithConsumerError(t *testing.T) {
 	pt1 := &geom.LinkedPoint{
-		Pt: geom.NewPoint32(1, 2, 3, 4, 5, 6, 7, 8),
+		Pt: geom.NewPoint(1, 2, 3, 4, 5, 6, 7, 8),
 	}
 	pt2 := &geom.LinkedPoint{
-		Pt: geom.NewPoint32(9, 10, 11, 12, 13, 14, 15, 16),
+		Pt: geom.NewPoint(9, 10, 11, 12, 13, 14, 15, 16),
 	}
 	pt3 := &geom.LinkedPoint{
-		Pt: geom.NewPoint32(17, 18, 19, 20, 21, 22, 23, 24),
+		Pt: geom.NewPoint(17, 18, 19, 20, 21, 22, 23, 24),
 	}
 	pt1.Next = pt2
 	pt2.Next = pt3
@@ -167,14 +163,13 @@ func TestWriterWithConsumerError(t *testing.T) {
 	root := &tree.MockNode{
 		TotalNumPts: 5,
 		Pts:         stream,
-		Children: [8]tree.Node{
+		ChildNodes: [8]tree.Node{
 			nil,
 			child,
 		},
 	}
 
 	w, err := NewWriter("base",
-		test.GetTestCoordinateConverterFactory(),
 		WithNumWorkers(1),
 		WithBufferRatio(10),
 	)
@@ -188,7 +183,7 @@ func TestWriterWithConsumerError(t *testing.T) {
 	w.producerFunc = func(basepath, folder string) Producer {
 		return p
 	}
-	w.consumerFunc = func(cc coor.CoordinateConverter, v version.TilesetVersion) Consumer {
+	w.consumerFunc = func(v version.TilesetVersion) Consumer {
 		return c
 	}
 	err = w.Write(root, "base", context.TODO())
@@ -213,7 +208,6 @@ func TestWriterWithConsumerError(t *testing.T) {
 
 func TestWriterTilesetVersion(t *testing.T) {
 	w, err := NewWriter("base",
-		test.GetTestCoordinateConverterFactory(),
 		WithNumWorkers(1),
 		WithBufferRatio(10),
 		WithTilesetVersion(version.TilesetVersion_1_0),
@@ -224,11 +218,11 @@ func TestWriterTilesetVersion(t *testing.T) {
 	if w.version != version.TilesetVersion_1_0 {
 		t.Errorf("unexpected tileset version")
 	}
-	c := w.consumerFunc(nil, version.TilesetVersion_1_0)
+	c := w.consumerFunc(version.TilesetVersion_1_0)
 	if _, success := (c.(*StandardConsumer).encoder).(*PntsEncoder); success != true {
 		t.Errorf("unexpected geometry encoder for tileset version 1.0")
 	}
-	w, err = NewWriter("base", nil,
+	w, err = NewWriter("base",
 		WithNumWorkers(1),
 		WithBufferRatio(10),
 		WithTilesetVersion(version.TilesetVersion_1_1),
@@ -239,7 +233,7 @@ func TestWriterTilesetVersion(t *testing.T) {
 	if w.version != version.TilesetVersion_1_1 {
 		t.Errorf("unexpected tileset version")
 	}
-	c = w.consumerFunc(nil, version.TilesetVersion_1_1)
+	c = w.consumerFunc(version.TilesetVersion_1_1)
 	if _, success := (c.(*StandardConsumer).encoder).(*GltfEncoder); success != true {
 		t.Errorf("unexpected geometry encoder for tileset version 1.1")
 	}

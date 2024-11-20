@@ -1,74 +1,15 @@
 package las
 
 import (
-	"bufio"
-	"encoding/binary"
 	"fmt"
-	"io"
 	"os"
-	"sync"
 
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/geom"
+	"github.com/mfbonfigli/gocesiumtiler/v2/internal/las/golas"
+	"github.com/mfbonfigli/gocesiumtiler/v2/tiler/model"
 )
 
-var recLengths = [11][4]int{
-	{20, 18, 19, 17}, // Point format 0
-	{28, 26, 27, 25}, // Point format 1
-	{26, 24, 25, 23}, // Point format 2
-	{34, 32, 33, 31}, // Point format 3
-	{57, 55, 56, 54}, // Point format 4
-	{63, 61, 62, 60}, // Point format 5
-	{30, 28, 29, 27}, // Point format 6
-	{36, 34, 35, 33}, // Point format 7
-	{38, 36, 37, 35}, // Point format 8
-	{59, 57, 58, 56}, // Point format 9
-	{67, 65, 66, 64}, // Point format 10
-}
-
-var xyzOffets = [11][3]int{
-	{0, 4, 8}, // Point format 0
-	{0, 4, 8}, // Point format 1
-	{0, 4, 8}, // Point format 2
-	{0, 4, 8}, // Point format 3
-	{0, 4, 8}, // Point format 4
-	{0, 4, 8}, // Point format 5
-	{0, 4, 8}, // Point format 6
-	{0, 4, 8}, // Point format 7
-	{0, 4, 8}, // Point format 8
-	{0, 4, 8}, // Point format 9
-	{0, 4, 8}, // Point format 10
-}
-
-var rgbOffets = [11][]int{
-	nil,          // Point format 0
-	nil,          // Point format 1
-	{20, 22, 24}, // Point format 2
-	{28, 30, 32}, // Point format 3
-	nil,          // Point format 4
-	{28, 30, 32}, // Point format 5
-	nil,          // Point format 6
-	{30, 32, 34}, // Point format 7
-	{30, 32, 34}, // Point format 8
-	nil,          // Point format 9
-	{30, 32, 34}, // Point format 10
-}
-
-// intensity offset is always 12
-
-var classificationOffets = [11]int{
-	15, // Point format 0
-	15, // Point format 1
-	15, // Point format 2
-	15, // Point format 3
-	15, // Point format 4
-	15, // Point format 5
-	16, // Point format 6
-	16, // Point format 7
-	16, // Point format 8
-	16, // Point format 9
-	16, // Point format 10
-}
-
+// LasReader wraps
 type LasReader interface {
 	// NumberOfPoints returns the number of points stored in the LAS file
 	NumberOfPoints() int
@@ -76,6 +17,8 @@ type LasReader interface {
 	GetNext() (geom.Point64, error)
 	// GetCRS returns a string defining the CRS. This is typically a string of the form EPSG:XYZ where XYZ is the EPSG code of the CRS.
 	GetCRS() string
+	// Close closes the reader
+	Close()
 }
 
 // CombinedFileLasReader enables reading a a list of LAS files as if they were a single one
@@ -83,23 +26,32 @@ type LasReader interface {
 type CombinedFileLasReader struct {
 	currentReader int
 	currentCount  int
-	readers       []*FileLasReader
+	readers       []LasReader
 	numPts        int
 	crs           string
 }
 
+// NewCombinedFileReader creates a new file reader for the files passed as input. If crs is the empty string, the
+// reader will autodetect the CRS from the input files, however an error is returned if the CRS is not consistent across
+// all of them or if it's not found in the files.
 func NewCombinedFileLasReader(files []string, crs string, eightBitColor bool) (*CombinedFileLasReader, error) {
-	r := &CombinedFileLasReader{
-		crs: crs,
-	}
+	r := &CombinedFileLasReader{}
+	crsProvided := crs != ""
 	for _, f := range files {
-		fr, err := NewFileLasReader(f, crs, eightBitColor)
+		fr, err := NewGoLasReader(f, crs, eightBitColor)
 		if err != nil {
 			return nil, err
 		}
 		r.numPts += fr.NumberOfPoints()
 		r.readers = append(r.readers, fr)
+		if !crsProvided {
+			if crs != "" && crs != fr.GetCRS() {
+				return nil, fmt.Errorf("no CRS was provided and inconsistent CRS were detected:\n%s\n\n and\n\n%s", crs, fr.GetCRS())
+			}
+			crs = fr.GetCRS()
+		}
 	}
+	r.crs = crs
 	return r, nil
 }
 
@@ -128,88 +80,78 @@ func (m *CombinedFileLasReader) GetNext() (geom.Point64, error) {
 	return r.GetNext()
 }
 
-// FileLasReader enables reading a single LAS file
-type FileLasReader struct {
-	f             *lasFile
-	eightBitColor bool
-	crs           string
-	r             io.Reader
-	current       int
-	sync.Mutex
+func (m *CombinedFileLasReader) Close() {
+	for _, r := range m.readers {
+		r.Close()
+	}
 }
 
-func NewFileLasReader(fileName string, crs string, eightBitColor bool) (*FileLasReader, error) {
-	vlrs := []VLR{}
-	las := lasFile{fileName: fileName, Header: lasHeader{}, VlrData: vlrs}
-	var err error
-	if las.f, err = os.Open(las.fileName); err != nil {
+// GoLasReader wraps a golas.Las object implementing the specific interface LasReader required by gocesiumtiler
+type GoLasReader struct {
+	file          *os.File
+	f             *golas.Las
+	eightBitColor bool
+	crs           string
+}
+
+// NewGoLasReader returns a GoLasReader instance. If crs is empty the system will attempt to autodetect
+// the CRS from the LAS metadata and return an error in case of issues.
+func NewGoLasReader(fileName string, crs string, eightBitColor bool) (*GoLasReader, error) {
+	f, err := os.Open(fileName)
+	if err != nil {
 		return nil, err
 	}
-	if err = las.readHeader(); err != nil {
+	g, err := golas.NewLas(f)
+	if err != nil {
+		f.Close()
 		return nil, err
 	}
-	if err := las.readVLRs(); err != nil {
-		return nil, err
+	if crs == "" {
+		crs = g.CRS()
+		if crs == "" {
+			f.Close()
+			return nil, fmt.Errorf("no CRS provided and was not possible to determine CRS from LAS file %s", fileName)
+		}
 	}
-	return &FileLasReader{
-		f:             &las,
+	return &GoLasReader{
+		file:          f,
+		f:             g,
 		eightBitColor: eightBitColor,
 		crs:           crs,
 	}, nil
 }
 
-func (f *FileLasReader) NumberOfPoints() int {
-	return f.f.Header.NumberPoints
+func (f *GoLasReader) NumberOfPoints() int {
+	return int(f.f.NumberOfPoints())
 }
 
-func (f *FileLasReader) GetNext() (geom.Point64, error) {
-	data := make([]byte, f.f.Header.PointRecordLength)
-	out := geom.Point64{}
-	f.Lock()
-	if f.current == 0 {
-		f.f.f.Seek(int64(f.f.Header.OffsetToPoints), 0)
-		f.r = bufio.NewReaderSize(f.f.f, 64*1024)
-	}
-	f.current = f.current + 1
-	if _, err := io.ReadFull(f.r, data); err != nil {
-		f.Unlock()
+func (f *GoLasReader) GetCRS() string {
+	return f.f.CRS()
+}
+
+func (f *GoLasReader) Close() {
+	f.file.Close()
+}
+
+func (f *GoLasReader) GetNext() (geom.Point64, error) {
+	pt, err := f.f.Next()
+	if err != nil {
 		return geom.Point64{}, err
 	}
-	f.Unlock()
-	header := f.f.Header
-	xyzOffsetValues := xyzOffets[header.PointFormatID]
-	xOffset := xyzOffsetValues[0]
-	yOffset := xyzOffsetValues[1]
-	zOffset := xyzOffsetValues[2]
-	out.X = float64(int32(binary.LittleEndian.Uint32(data[xOffset:xOffset+4])))*header.XScaleFactor + header.XOffset
-	out.Y = float64(int32(binary.LittleEndian.Uint32(data[yOffset:yOffset+4])))*header.YScaleFactor + header.YOffset
-	out.Z = float64(int32(binary.LittleEndian.Uint32(data[zOffset:zOffset+4])))*header.ZScaleFactor + header.ZOffset
-
-	rgbOffsetValues := rgbOffets[header.PointFormatID]
-	if rgbOffsetValues != nil {
-		rOffset := rgbOffsetValues[0]
-		gOffset := rgbOffsetValues[1]
-		bOffset := rgbOffsetValues[2]
-		var conversionFactor = uint16(256)
-		if f.eightBitColor {
-			conversionFactor = uint16(1)
-		}
-
-		out.R = uint8(binary.LittleEndian.Uint16(data[rOffset:rOffset+2]) / conversionFactor)
-		out.G = uint8(binary.LittleEndian.Uint16(data[gOffset:gOffset+2]) / conversionFactor)
-		out.B = uint8(binary.LittleEndian.Uint16(data[bOffset:bOffset+2]) / conversionFactor)
+	var corr uint16 = 256
+	if f.eightBitColor {
+		corr = 1
 	}
-	intensityOffset := 12
-	out.Intensity = uint8(binary.LittleEndian.Uint16(data[intensityOffset : intensityOffset+2]))
-	classificationOffset := classificationOffets[header.PointFormatID]
-	classification := data[classificationOffset]
-	// the upper 3 high bits are used for metadata and not for the actual classification
-	// so wipe them out
-	out.Classification = uint8(classification & 0b00011111)
-
-	return out, nil
-}
-
-func (f *FileLasReader) GetCRS() string {
-	return f.crs
+	return geom.Point64{
+		Vector: model.Vector{
+			X: pt.X,
+			Y: pt.Y,
+			Z: pt.Z,
+		},
+		R:              uint8(pt.Red / corr),
+		G:              uint8(pt.Green / corr),
+		B:              uint8(pt.Blue / corr),
+		Intensity:      uint8(pt.Intensity),
+		Classification: pt.Classification,
+	}, nil
 }

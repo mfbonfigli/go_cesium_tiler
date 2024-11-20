@@ -50,7 +50,12 @@ func NewBoundingBoxFromParent(parent BoundingBox, octant int) BoundingBox {
 	return NewBoundingBox(xMin, xMax, yMin, yMax, zMin, zMax)
 }
 
-// GetAsArray returns the coordinates as an array of form Xmin,Ymin,Xmax,Ymax,Zmin,Zmax
-func (b *BoundingBox) GetAsArray() []float64 {
-	return []float64{b.Xmin, b.Ymin, b.Xmax, b.Ymax, b.Zmin, b.Zmax}
+// AsCesiumBox returns the bounding box expressed according to the cesium "box" format
+func (b BoundingBox) AsCesiumBox() [12]float64 {
+	return [12]float64{
+		b.Xmid, b.Ymid, b.Zmid,
+		(b.Xmax - b.Xmid), 0, 0,
+		0, (b.Ymax - b.Ymid), 0,
+		0, 0, (b.Zmax - b.Zmid),
+	}
 }

@@ -3,8 +3,8 @@ package proj
 import (
 	"testing"
 
-	"github.com/mfbonfigli/gocesiumtiler/v2/internal/geom"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/utils"
+	"github.com/mfbonfigli/gocesiumtiler/v2/tiler/model"
 	"github.com/twpayne/go-proj/v10"
 )
 
@@ -17,51 +17,51 @@ func TestToSrid(t *testing.T) {
 	}
 
 	// 4326 to 4978
-	actual, err := c.Transform("EPSG:4326", "EPSG:4978", geom.Coord{X: 123.474003, Y: 8.099314, Z: 0})
+	actual, err := c.Transform("EPSG:4326", "EPSG:4978", model.Vector{X: 123.474003, Y: 8.099314, Z: 0})
 	if err != nil {
 		t.Errorf("unexpected error %v", err)
 	}
-	expected := geom.Coord{X: -3483057.5277292132, Y: 5267517.241803079, Z: 892655.4197953615}
+	expected := model.Vector{X: -3483057.5277292132, Y: 5267517.241803079, Z: 892655.4197953615}
 	if err := utils.CompareCoord(actual, expected, coordTolerance); err != nil {
 		t.Errorf("expected coordinate %v, got %v. Err: %v", expected, actual, err)
 	}
 
 	// 4978 to 4326
-	expected, err = c.Transform("EPSG:4978", "EPSG:4326", geom.Coord{X: -3483057.5277292132, Y: 5267517.241803079, Z: 892655.4197953615})
+	expected, err = c.Transform("EPSG:4978", "EPSG:4326", model.Vector{X: -3483057.5277292132, Y: 5267517.241803079, Z: 892655.4197953615})
 	if err != nil {
 		t.Errorf("unexpected error %v", err)
 	}
-	actual = geom.Coord{X: 123.474003, Y: 8.099314, Z: 0}
+	actual = model.Vector{X: 123.474003, Y: 8.099314, Z: 0}
 	if err := utils.CompareCoord(actual, expected, coordTolerance); err != nil {
 		t.Errorf("expected coordinate %v, got %v. Err: %v", expected, actual, err)
 	}
 
 	// 4326 to 3124
-	actual, err = c.Transform("EPSG:4326", "EPSG:3124", geom.Coord{X: 123.474003, Y: 8.099314, Z: 0})
+	actual, err = c.Transform("EPSG:4326", "EPSG:3124", model.Vector{X: 123.474003, Y: 8.099314, Z: 0})
 	if err != nil {
 		t.Errorf("unexpected error %v", err)
 	}
-	expected = geom.Coord{X: 552074.5400524682, Y: 895674.6033419219, Z: 0}
+	expected = model.Vector{X: 552074.5400524682, Y: 895674.6033419219, Z: 0}
 	if err := utils.CompareCoord(actual, expected, coordTolerance); err != nil {
 		t.Errorf("expected coordinate %v, got %v. Err: %v", expected, actual, err)
 	}
 
 	// 4978 to 3124
-	actual, err = c.Transform("EPSG:4978", "EPSG:3124", geom.Coord{X: -3483057.5277292132, Y: 5267517.241803079, Z: 892655.4197953615})
+	actual, err = c.Transform("EPSG:4978", "EPSG:3124", model.Vector{X: -3483057.5277292132, Y: 5267517.241803079, Z: 892655.4197953615})
 	if err != nil {
 		t.Errorf("unexpected error %v", err)
 	}
-	expected = geom.Coord{X: 552074.5400524682, Y: 895674.6033419219, Z: 0}
+	expected = model.Vector{X: 552074.5400524682, Y: 895674.6033419219, Z: 0}
 	if err := utils.CompareCoord(actual, expected, coordTolerance); err != nil {
 		t.Errorf("expected coordinate %v, got %v. Err: %v", expected, actual, err)
 	}
 
 	// 3124 to 4978
-	actual, err = c.Transform("EPSG:3124", "EPSG:4978", geom.Coord{X: 552074.5400524682, Y: 895674.6033419219, Z: 0})
+	actual, err = c.Transform("EPSG:3124", "EPSG:4978", model.Vector{X: 552074.5400524682, Y: 895674.6033419219, Z: 0})
 	if err != nil {
 		t.Errorf("unexpected error %v", err)
 	}
-	expected = geom.Coord{X: -3483057.5277292132, Y: 5267517.241803079, Z: 892655.4197953615}
+	expected = model.Vector{X: -3483057.5277292132, Y: 5267517.241803079, Z: 892655.4197953615}
 	if err := utils.CompareCoord(actual, expected, coordTolerance); err != nil {
 		t.Errorf("expected coordinate %v, got %v. Err: %v", expected, actual, err)
 	}
@@ -75,11 +75,11 @@ func TestToWGS84Cartesian(t *testing.T) {
 	}
 
 	// 4326 to 4978
-	actual, err := c.ToWGS84Cartesian("EPSG:4326", geom.Coord{X: 123.474003, Y: 8.099314, Z: 0})
+	actual, err := c.ToWGS84Cartesian("EPSG:4326", model.Vector{X: 123.474003, Y: 8.099314, Z: 0})
 	if err != nil {
 		t.Errorf("unexpected error %v", err)
 	}
-	expected := geom.Coord{X: -3483057.5277292132, Y: 5267517.241803079, Z: 892655.4197953615}
+	expected := model.Vector{X: -3483057.5277292132, Y: 5267517.241803079, Z: 892655.4197953615}
 	if err := utils.CompareCoord(actual, expected, coordTolerance); err != nil {
 		t.Errorf("expected coordinate %v, got %v. Err: %v", expected, actual, err)
 	}

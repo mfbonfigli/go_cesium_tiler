@@ -5,7 +5,6 @@ import (
 	"math"
 	"sync"
 
-	"github.com/mfbonfigli/gocesiumtiler/v2/internal/conv/coor"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/tree"
 	"github.com/mfbonfigli/gocesiumtiler/v2/version"
 )
@@ -19,25 +18,23 @@ type StandardWriter struct {
 	numWorkers   int
 	bufferRatio  int
 	basePath     string
-	convFactory  coor.ConverterFactory
 	version      version.TilesetVersion
 	producerFunc func(basepath, folder string) Producer
-	consumerFunc func(coor.CoordinateConverter, version.TilesetVersion) Consumer
+	consumerFunc func(version.TilesetVersion) Consumer
 }
 
-func NewWriter(basePath string, convFactory coor.ConverterFactory, options ...func(*StandardWriter)) (*StandardWriter, error) {
+func NewWriter(basePath string, options ...func(*StandardWriter)) (*StandardWriter, error) {
 	w := &StandardWriter{
 		basePath:     basePath,
 		numWorkers:   1,
 		bufferRatio:  5,
 		version:      version.TilesetVersion_1_0,
 		producerFunc: NewStandardProducer,
-		convFactory:  convFactory,
-		consumerFunc: func(cc coor.CoordinateConverter, v version.TilesetVersion) Consumer {
+		consumerFunc: func(v version.TilesetVersion) Consumer {
 			if v == version.TilesetVersion_1_0 {
-				return NewStandardConsumer(cc, WithGeometryEncoder(NewPntsEncoder()))
+				return NewStandardConsumer(WithGeometryEncoder(NewPntsEncoder()))
 			}
-			return NewStandardConsumer(cc, WithGeometryEncoder(NewGltfEncoder()))
+			return NewStandardConsumer(WithGeometryEncoder(NewGltfEncoder()))
 		},
 	}
 	for _, optFn := range options {
@@ -81,17 +78,13 @@ func (w *StandardWriter) Write(t tree.Tree, folderName string, ctx context.Conte
 	// producing is easy, only 1 producer
 	producer := w.producerFunc(w.basePath, folderName)
 	waitGroup.Add(1)
-	go producer.Produce(workChannel, errorChannel, &waitGroup, t.GetRootNode(), ctx)
+	go producer.Produce(workChannel, errorChannel, &waitGroup, t.RootNode(), ctx)
 
 	// add consumers to waitgroup and launch them
 	for i := 0; i < w.numWorkers; i++ {
 		waitGroup.Add(1)
 		// instantiate a new converter per each goroutine for thread safety
-		c, err := w.convFactory()
-		if err != nil {
-			return err
-		}
-		consumer := w.consumerFunc(c, w.version)
+		consumer := w.consumerFunc(w.version)
 		go consumer.Consume(workChannel, errorChannel, &waitGroup)
 	}
 

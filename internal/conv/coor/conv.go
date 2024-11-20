@@ -1,15 +1,15 @@
 package coor
 
 import (
-	"github.com/mfbonfigli/gocesiumtiler/v2/internal/geom"
+	"github.com/mfbonfigli/gocesiumtiler/v2/tiler/model"
 )
 
-type CoordinateConverter interface {
-	Transform(sourceCRS string, targetCRS string, coord geom.Coord) (geom.Coord, error)
-	ToWGS84Cartesian(sourceCRS string, coord geom.Coord) (geom.Coord, error)
+type Converter interface {
+	Transform(sourceCRS string, targetCRS string, coord model.Vector) (model.Vector, error)
+	ToWGS84Cartesian(sourceCRS string, coord model.Vector) (model.Vector, error)
 	Cleanup()
 }
 
 // ConverterFactory returns a new CoordinateConverter that should only be used in the same goroutine
 // to avoid race conditions
-type ConverterFactory func() (CoordinateConverter, error)
+type ConverterFactory func() (Converter, error)

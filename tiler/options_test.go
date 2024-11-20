@@ -2,17 +2,20 @@ package tiler
 
 import (
 	"testing"
+
+	"github.com/mfbonfigli/gocesiumtiler/v2/tiler/mutator"
 )
 
 func TestOptions(t *testing.T) {
+	m := mutator.NewSubsampler(0.5)
 	opts := NewTilerOptions(
 		WithCallback(func(event TilerEvent, filename string, elapsed int64, msg string) {}),
 		WithEightBitColors(true),
-		WithElevationOffset(1),
 		WithGridSize(11.1),
 		WithMaxDepth(12),
 		WithMinPointsPerTile(10),
 		WithWorkerNumber(3),
+		WithMutators([]mutator.Mutator{m}),
 	)
 
 	if opts.callback == nil {
@@ -20,9 +23,6 @@ func TestOptions(t *testing.T) {
 	}
 	if opts.eightBitColors != true {
 		t.Errorf("expected eightbitcolor to be %v got %v", true, opts.eightBitColors)
-	}
-	if opts.elevationOffset != 1 {
-		t.Errorf("expected elevationOffset to be %v got %v", 1, opts.elevationOffset)
 	}
 	if opts.gridSize != 11.1 {
 		t.Errorf("expected gridSize to be %v got %v", 11.1, opts.gridSize)
@@ -35,5 +35,8 @@ func TestOptions(t *testing.T) {
 	}
 	if opts.numWorkers != 3 {
 		t.Errorf("expected numWorkers to be %v got %v", 3, opts.numWorkers)
+	}
+	if opts.mutators[0] != m && len(opts.mutators) != 1 {
+		t.Error("expected 1 mutator to be registered")
 	}
 }

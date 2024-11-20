@@ -21,11 +21,11 @@ func TestWriteIntAs4ByteNumber(t *testing.T) {
 	}
 }
 
-func TestWriteTruncateFloat64ToFloat32(t *testing.T) {
+func TestWriteFloat32LittleEndian(t *testing.T) {
 	var b bytes.Buffer
 	w := bufio.NewWriter(&b)
 
-	err := WriteTruncateFloat64ToFloat32(123456789, w)
+	err := WriteFloat32LittleEndian(123456789, w)
 	if err != nil {
 		t.Fatalf("unexpected err %v", err)
 	}
