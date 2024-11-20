@@ -23,7 +23,7 @@ var tilerProvider func() (tiler.Tiler, error) = func() (tiler.Tiler, error) {
 	return tiler.NewGoCesiumTiler()
 }
 
-var cmdVersion = "2.0.0-gamma"
+var cmdVersion = "2.0.0"
 
 // GitCommit is injected dynamically at build time via `go build -ldflags "-X main.GitCommit=XYZ"`
 var GitCommit string = "(na)"
