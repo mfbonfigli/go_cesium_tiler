@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"path"
 	"strings"
@@ -69,17 +70,24 @@ func (g *GltfPointCloud) Write(node tree.Node, folderPath string) error {
 	defer w.Flush()
 
 	binaryData, err := binaryData(node)
+	paddedBinaryData := padByteArrayTo4byte(binaryData.data)
 	if err != nil {
 		return err
 	}
-	jsonString, err := jsonNode(node, len(binaryData))
+	jsonString, err := jsonNode(node, binaryData, len(paddedBinaryData))
 	if err != nil {
 		return err
 	}
 	paddedJsonData := []byte(padStringTo4byte(jsonString))
+	fmt.Println(len(jsonString), len(paddedJsonData))
 	jsonLength := len(paddedJsonData)
-	paddedBinaryData := padByteArrayTo4byte(binaryData)
 	binaryLength := len(paddedBinaryData)
+	bufLen := EncodeVertexBufferBound(node.NumberOfPoints(), 12)
+	d := make([]byte, bufLen)
+	n, err := EncodeVertexBuffer(d, paddedBinaryData[0:node.NumberOfPoints()*12], node.NumberOfPoints(), 12)
+	fmt.Println(err)
+	fmt.Println(n, node.NumberOfPoints()*12)
+	//fmt.Println(d)
 	totalLength := 12 + 4 + 4 + jsonLength + 4 + 4 + binaryLength
 
 	// 12 BYTE HEADER
@@ -128,7 +136,7 @@ func (g *GltfPointCloud) Write(node tree.Node, folderPath string) error {
 	return nil
 }
 
-func jsonNode(n tree.Node, bufLen int) (string, error) {
+func jsonNode(n tree.Node, b *binaryOutput, bufLen int) (string, error) {
 	j := glTFJson{
 		Buffers: []buffer{
 			{ByteLength: bufLen},
@@ -185,27 +193,24 @@ func jsonNode(n tree.Node, bufLen int) (string, error) {
 				ComponentType: componentTypeFloat,
 				Count:         n.Points().Len(),
 				Type:          accessorTypeVec3,
-				Max:           []float64{600, 200, 200},
-				Min:           []float64{-100, -500, -100},
+				Max:           b.max,
+				Min:           b.min,
 			},
 			{
-				BufferView:    0,
-				ByteOffset:    12,
+				BufferView:    1,
 				ComponentType: componentTypeUnsignedByte,
 				Count:         n.Points().Len(),
 				Type:          accessorTypeVec3,
 				Normalized:    true,
 			},
 			{
-				BufferView:    0,
-				ByteOffset:    16,
+				BufferView:    2,
 				ComponentType: componentTypeUnsignedShort,
 				Count:         n.Points().Len(),
 				Type:          accessorTypeScalar,
 			},
 			{
-				BufferView:    0,
-				ByteOffset:    20,
+				BufferView:    3,
 				ComponentType: componentTypeUnsignedByte,
 				Count:         n.Points().Len(),
 				Type:          accessorTypeScalar,
@@ -218,8 +223,28 @@ func jsonNode(n tree.Node, bufLen int) (string, error) {
 		BufferViews: []bufferView{
 			{
 				Buffer:     0,
-				ByteLength: bufLen,
-				ByteStride: 24,
+				ByteLength: b.coordinatesEnd - b.coordinatesStart,
+				Target:     arrayBuffer,
+			},
+			{
+				Buffer:     0,
+				ByteLength: b.colorEnd - b.colorStart,
+				ByteOffset: b.colorStart,
+				ByteStride: 4,
+				Target:     arrayBuffer,
+			},
+			{
+				Buffer:     0,
+				ByteLength: b.intensityEnd - b.intensityStart,
+				ByteOffset: b.intensityStart,
+				ByteStride: 4,
+				Target:     arrayBuffer,
+			},
+			{
+				Buffer:     0,
+				ByteLength: b.classificationEnd - b.classificationStart,
+				ByteOffset: b.classificationStart,
+				ByteStride: 4,
 				Target:     arrayBuffer,
 			},
 		},
@@ -229,7 +254,7 @@ func jsonNode(n tree.Node, bufLen int) (string, error) {
 				Primitives: []primitive{
 					{
 						Extensions: map[string]map[string]any{
-							"EXT_structural_metadata": map[string]any{
+							"EXT_structural_metadata": {
 								"propertyAttributes": []int{0},
 							},
 						},
@@ -266,18 +291,57 @@ func jsonNode(n tree.Node, bufLen int) (string, error) {
 	return string(jBytes), nil
 }
 
-func binaryData(n tree.Node) ([]byte, error) {
+type binaryOutput struct {
+	coordinatesStart    int
+	coordinatesEnd      int
+	colorStart          int
+	colorEnd            int
+	intensityStart      int
+	intensityEnd        int
+	classificationStart int
+	classificationEnd   int
+	max                 []float32
+	min                 []float32
+	data                []byte
+}
+
+func binaryData(n tree.Node) (*binaryOutput, error) {
 	// x,y,z are VEC3 floats, hence offset should be aligned to 4 bytes
 	// color are VEC3 of bytes, hence offset should be aligned to 1 byte
 	// intensity and classifications are unsigned shorts, hence offset should be aligned to 2 bytes
 	pts := n.Points()
 	b := &bytes.Buffer{}
+	out := &binaryOutput{
+		max: []float32{math.MinInt32, math.MinInt32, math.MinInt32},
+		min: []float32{math.MaxInt32, math.MaxInt32, math.MaxInt32},
+	}
+	// Coordinates bufferView
+	out.coordinatesStart = 0
 	for i := 0; i < pts.Len(); i++ {
 		p, err := pts.Next()
 		if err != nil {
 			return nil, err
 		}
-		// [ 0 - 11 ] X, Y, Z are 4x3 bytes in a VEC3 and offset is 0 hence aligned automatically
+		// update bounds
+		if p.X > out.max[0] {
+			out.max[0] = p.X
+		}
+		if p.Y > out.max[1] {
+			out.max[1] = p.Y
+		}
+		if p.Z > out.max[2] {
+			out.max[2] = p.Z
+		}
+		if p.X < out.min[0] {
+			out.min[0] = p.X
+		}
+		if p.Y < out.min[1] {
+			out.min[1] = p.Y
+		}
+		if p.Z < out.min[2] {
+			out.min[2] = p.Z
+		}
+		// X, Y, Z are 4x3 bytes in a VEC3 and offset is 0 hence aligned automatically
 		if err := binary.Write(b, binary.LittleEndian, p.X); err != nil {
 			return nil, err
 		}
@@ -287,8 +351,21 @@ func binaryData(n tree.Node) ([]byte, error) {
 		if err := binary.Write(b, binary.LittleEndian, p.Z); err != nil {
 			return nil, err
 		}
+		out.coordinatesEnd += 12
+	}
 
-		// [ 12 - 14 ] R, G, B are 4x1 bytes in a VEC3 and offset is 12 hence aligned
+	// colors start is automatically aligned, no need to add padding
+
+	pts.Reset()
+	// Colors bufferView
+	out.colorStart = out.coordinatesEnd
+	out.colorEnd = out.colorStart
+	for i := 0; i < pts.Len(); i++ {
+		p, err := pts.Next()
+		if err != nil {
+			return nil, err
+		}
+		// R, G, B are 1x3 bytes in a VEC3: Offset: N*12
 		if err := binary.Write(b, binary.LittleEndian, p.R); err != nil {
 			return nil, err
 		}
@@ -298,52 +375,69 @@ func binaryData(n tree.Node) ([]byte, error) {
 		if err := binary.Write(b, binary.LittleEndian, p.B); err != nil {
 			return nil, err
 		}
-
-		// [ 15 ] padding to align offset to 4 bytes
-		if err := b.WriteByte(0); err != nil {
+		if _, err := b.Write(make([]byte, 1)); err != nil {
 			return nil, err
 		}
+		out.colorEnd += 4
+	}
 
-		// [ 16 - 17 ] Intensity, 2 bytes, aligned to 16
+	pts.Reset()
+	// Intensity view: Offset: N*12 + N*3 = N*15. This must be aligned to 4 bytes
+	out.intensityStart = out.colorEnd
+	out.intensityEnd = out.intensityStart
+	for i := 0; i < pts.Len(); i++ {
+		p, err := pts.Next()
+		if err != nil {
+			return nil, err
+		}
+		// Intensity, 2 bytes
 		if err := binary.Write(b, binary.LittleEndian, uint16(p.Intensity)); err != nil {
 			return nil, err
 		}
-
-		// [ 18 - 19 ] padding to align offset to 4 bytes
-		if _, err := b.Write([]byte{0, 0}); err != nil {
+		if _, err := b.Write(make([]byte, 2)); err != nil {
 			return nil, err
 		}
+		out.intensityEnd += 4
+	}
 
-		// [ 20 ] Classification is 1 byte and offset aligned to 4 bytes
+	pts.Reset()
+	// Classification view: Offset: N*12+N*3+N*2+intPadding=N*17+intPadding, type is 1 byte so it's aligned
+	out.classificationStart = out.intensityEnd
+	out.classificationEnd = out.classificationStart
+	for i := 0; i < pts.Len(); i++ {
+		p, err := pts.Next()
+		if err != nil {
+			return nil, err
+		}
+		// Classification is 1 byte
 		if err := binary.Write(b, binary.LittleEndian, p.Classification); err != nil {
 			return nil, err
 		}
-
-		// [ 21 - 23 ] padding to 4 bytes
-		if _, err := b.Write([]byte{0, 0, 0}); err != nil {
+		if _, err := b.Write(make([]byte, 3)); err != nil {
 			return nil, err
 		}
+		out.classificationEnd += 4
 	}
-	return b.Bytes(), nil
+	out.data = b.Bytes()
+	return out, nil
 }
 
 func padStringTo4byte(str string) string {
-	padding := len(str) % 4
-	if padding == 0 {
+	n := len(str) % 4
+	if n == 0 {
 		return str
 	}
+	padding := 4 - n
 	return fmt.Sprintf("%s%s", str, strings.Repeat(" ", padding))
 }
 
 func padByteArrayTo4byte(arr []byte) []byte {
 	n := len(arr) % 4
-	if len(arr)%4 == 0 {
+	if n == 0 {
 		return arr
 	}
-	for i := 0; i < n; i++ {
-		arr = append(arr, 0x00)
-	}
-	return arr
+	padding := 4 - n
+	return append(arr, make([]byte, padding)...)
 }
 
 type glTFJson struct {
@@ -369,8 +463,8 @@ type accessor struct {
 	ComponentType componentType `json:"componentType"`
 	Count         int           `json:"count"`
 	Type          accessorType  `json:"type"`
-	Max           []float64     `json:"max,omitempty"`
-	Min           []float64     `json:"min,omitempty"`
+	Max           []float32     `json:"max,omitempty"`
+	Min           []float32     `json:"min,omitempty"`
 	Normalized    bool          `json:"normalized,omitempty"`
 }
 
@@ -382,7 +476,8 @@ type asset struct {
 type bufferView struct {
 	Buffer     int          `json:"buffer"`
 	ByteLength int          `json:"byteLength"`
-	ByteStride int          `json:"byteStride"`
+	ByteStride int          `json:"byteStride,omitempty"`
+	ByteOffset int          `json:"byteOffset,omitempty"`
 	Target     bufferTarget `json:"target"`
 }
 
