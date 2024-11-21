@@ -219,6 +219,7 @@ func (g *Las) Next() (Point, error) {
 	// a Seek operation right before returning the struct
 	g.Lock()
 	if g.current >= g.NumberOfPoints() {
+		g.Unlock()
 		return p, io.EOF
 	}
 	data := make([]byte, g.Header.PointDataRecordLength)
