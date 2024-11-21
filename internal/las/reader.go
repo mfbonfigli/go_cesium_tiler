@@ -2,7 +2,9 @@ package las
 
 import (
 	"fmt"
+	"io"
 	"os"
+	"sync/atomic"
 
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/geom"
 	"github.com/mfbonfigli/gocesiumtiler/v2/internal/las/golas"
@@ -24,8 +26,7 @@ type LasReader interface {
 // CombinedFileLasReader enables reading a a list of LAS files as if they were a single one
 // the files MUST have the same properties (SRID, etc)
 type CombinedFileLasReader struct {
-	currentReader int
-	currentCount  int
+	currentReader atomic.Int32
 	readers       []LasReader
 	numPts        int
 	crs           string
@@ -64,20 +65,19 @@ func (m *CombinedFileLasReader) GetCRS() string {
 }
 
 func (m *CombinedFileLasReader) GetNext() (geom.Point64, error) {
-	if m.currentReader >= len(m.readers) {
-		return geom.Point64{}, fmt.Errorf("no points to read")
-	}
-	r := m.readers[m.currentReader]
-	if m.currentCount == r.NumberOfPoints() {
-		m.currentReader++
-		m.currentCount = 0
-		if m.currentReader >= len(m.readers) {
-			return geom.Point64{}, fmt.Errorf("no points to read")
+	for {
+		currReader := int(m.currentReader.Load())
+		if currReader >= len(m.readers) {
+			return geom.Point64{}, io.EOF
 		}
-		r = m.readers[m.currentReader]
+		pt, err := m.readers[currReader].GetNext()
+		if err != nil {
+			// try to move on to the next reader
+			m.currentReader.CompareAndSwap(int32(currReader), int32(currReader)+1)
+			continue
+		}
+		return pt, nil
 	}
-	m.currentCount++
-	return r.GetNext()
 }
 
 func (m *CombinedFileLasReader) Close() {

@@ -59,6 +59,9 @@ You can preview a couple of tilesets generated from this tool at this [website](
 
 
 ## Changelog
+##### Version 2.0.1
+* Resolved a bug that prevented the correct functioning of the join flag when processing multiple LAS files from a folder.
+
 ##### Version 2.0.0
 * Most of the code has been rewritten from the ground up, achieving much faster tiling with lower memory usage
 * Uses Proj v9.5.0: all projections supported by the Proj library are automatically supported by gocesiumtiler.
